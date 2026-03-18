@@ -1,0 +1,11 @@
+📢 {{ title }}
+
+{% for x in items %}
+- {{ x.bond_name }}（{{ x.bond_code }}）
+  申购日：{{ x.subscribe_date }}{% if x.apply_code %}  
+  申购代码：{{ x.apply_code }}{% endif %}{% if x.market %}  
+  市场：{{ x.market }}{% endif %}
+
+{% else %}
+暂无可申购可转债。
+{% endfor %}

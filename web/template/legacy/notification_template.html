@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+            width: 20%;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    {% if grid_info %}
+        <table>
+            <thead>
+                <tr>
+                    <th>资产名称</th>
+                    <th>网格类型名称</th>
+                    <th>买入数量</th>
+                    <th>卖出数量</th>
+                    <th>监控状态变化</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in grid_info %}
+                <tr>
+                    <td>{{ item.asset_name }}</td>
+                    <td>{{ item.grid_type_name }}</td>
+                    <td>{{ item.trade_list.buy_count }}</td>
+                    <td>{{ item.trade_list.sell_count }}</td>
+                    <td>{{ item.current_change }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>没有相关的网格信息。</p>
+    {% endif %}
+</body>
+</html>

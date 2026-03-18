@@ -1,0 +1,12 @@
+📢 {{ title }} 📢
+
+{% for item in grid_info %}
+资产名称: {{ item.asset_name }}
+网格类型: {{ item.grid_type_name }}
+当前变化: {{ item.current_change }}
+买入数: {{ item.buy_count }}
+卖出数: {{ item.sell_count }}
+
+{% else %}
+没有相关的网格信息。
+{% endfor %}

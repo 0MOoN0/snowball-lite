@@ -1,0 +1,37 @@
+# docker-compose.yml
+version: '3'
+services:
+  web:
+    build: .
+    container_name: snow
+    restart: no
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_APP=application.py
+      - SNOW_APP_STATUS=dev
+      - FLASK_DEBUG=False
+      - pushplus=${pushplus}
+      - telegram_bot=${telegram_bot}
+      - chat_id=${chat_id}
+      - STG_DB_PASSWORD=${STG_DB_PASSWORD}
+      - STG_DB_HOST=${STG_DB_HOST}
+      - STG_DB_PORT=${STG_DB_PORT}
+      - STG_REDIS_HOST=${STG_REDIS_HOST}
+      - STG_REDIS_PORT=${STG_REDIS_PORT}
+      - STG_REDIS_PASSWORD=${STG_REDIS_PASSWORD}
+      - DEV_DB_PASSWORD=${STG_DB_PASSWORD}
+      - DEV_DB_HOST=${STG_DB_HOST}
+      - DEV_DB_PORT=${STG_DB_PORT}
+      - DEV_REDIS_HOST=${STG_REDIS_HOST}
+      - DEV_REDIS_PORT=${STG_REDIS_PORT}
+      - DEV_REDIS_PASSWORD=${STG_REDIS_PASSWORD}
+    volumes:
+      - /mnt/d/DevFiles/docker_data/snowball/logs:/app/weblogs
+    networks:
+      - snowball
+    command: gunicorn web.application:app -c ./web/gunicorn.config.py
+networks:
+  snowball:
+    name: snowball
+    driver: bridge

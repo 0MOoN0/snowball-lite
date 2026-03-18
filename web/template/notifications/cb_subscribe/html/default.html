@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+        th { background: #f6f6f6; }
+    </style>
+    </head>
+<body>
+    <h1>{{ title }}</h1>
+    {% if items and items|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>债券名称</th>
+                <th>代码</th>
+                <th>申购日</th>
+                <th>申购代码</th>
+                <th>市场</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for x in items %}
+            <tr>
+                <td>{{ x.bond_name }}</td>
+                <td>{{ x.bond_code }}</td>
+                <td>{{ x.subscribe_date }}</td>
+                <td>{{ x.apply_code }}</td>
+                <td>{{ x.market }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>暂无可申购可转债。</p>
+    {% endif %}
+</body>
+</html>
