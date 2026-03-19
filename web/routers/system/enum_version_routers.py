@@ -13,6 +13,7 @@ from web.common.api_factory import get_api
 from web.common.utils import R
 from web.common.cache import cache
 from web.common.enum.version_enum import VersionKeyEnum
+from web.common.utils.enum_utils import load_enum_version_from_sqlite
 from web.weblogger import debug, error
 import json
 
@@ -92,6 +93,13 @@ class EnumVersionRouters(Resource):
         """
         try:
             debug("开始获取枚举版本信息")
+            if current_app.config.get("_config_name") == "lite":
+                version_data = load_enum_version_from_sqlite(
+                    key=VersionKeyEnum.ENUM.value
+                )
+                debug(f"成功从 SQLite 读取枚举版本数据: {version_data}")
+                return R.ok(data=version_data, msg="获取枚举版本成功")
+
             if not current_app.config.get("CACHE_AVAILABLE", False) or not cache.is_initialized():
                 return R.fail(msg=_redis_boundary_message("枚举版本查询"))
             

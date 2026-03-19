@@ -237,6 +237,11 @@ def create_app(config_name="dev"):
             merge=False,
         )
     else:
-        app.logger.info("由于缓存系统未启用，跳过枚举版本写入")
+        if app.config.get("_config_name") == "lite":
+            app.logger.info(
+                "由于缓存系统未启用，跳过 Redis 枚举版本写入；lite 会在 SQLite bootstrap 后写入版本信息"
+            )
+        else:
+            app.logger.info("由于缓存系统未启用，跳过枚举版本写入")
     app.logger.info("应用初始化完成，所有关键组件正常工作")
     return app

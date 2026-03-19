@@ -72,6 +72,165 @@ def test_lite_bootstrap_does_not_require_optional_infra_packages(tmp_path: pathl
     assert "LITE_OK" in result.stdout
 
 
+def test_lite_bootstrap_survives_blocked_mysql_and_optional_infra_packages(tmp_path: pathlib.Path) -> None:
+    db_path = tmp_path / "snowball_lite.db"
+    cache_dir = tmp_path / "lite_xalpha_cache"
+
+    result = _run_python_with_blocked_imports(
+        tmp_path=tmp_path,
+        blocked_modules={
+            "MySQLdb",
+            "apscheduler",
+            "dramatiq",
+            "flask_apscheduler",
+            "flask_profiler",
+            "mysql",
+            "pymysql",
+            "redis",
+        },
+        code=textwrap.dedent(
+            f"""
+            import json
+            import os
+            from pathlib import Path
+
+            from sqlalchemy import inspect, text
+
+            os.environ["LITE_DB_PATH"] = str(Path({str(db_path)!r}))
+            os.environ["LITE_XALPHA_CACHE_DIR"] = str(Path({str(cache_dir)!r}))
+            os.environ["LITE_XALPHA_CACHE_BACKEND"] = "csv"
+
+            from web import create_app
+            from web.lite_bootstrap import bootstrap_lite_database
+            from web.models import db
+
+            app = create_app("lite")
+
+            with app.app_context():
+                bootstrap_lite_database(app)
+                engine = db.engines["snowball"]
+                table_names = set(inspect(engine).get_table_names())
+
+                with engine.connect() as conn:
+                    version = conn.execute(
+                        text("SELECT version_num FROM alembic_version")
+                    ).scalar()
+                    foreign_keys = conn.execute(text("PRAGMA foreign_keys")).scalar()
+                    journal_mode = conn.execute(text("PRAGMA journal_mode")).scalar()
+
+                assert version == "lite_stage3_baseline"
+                assert "tb_asset" in table_names
+                assert "tb_record" in table_names
+                assert foreign_keys == 1
+                assert str(journal_mode).lower() == "wal"
+                print(
+                    json.dumps(
+                        {{
+                            "table_count": len(table_names),
+                            "version": version,
+                            "foreign_keys": foreign_keys,
+                            "journal_mode": journal_mode,
+                        }}
+                    )
+                )
+
+            print("LITE_BOOTSTRAP_OK")
+            """
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "LITE_BOOTSTRAP_OK" in result.stdout
+    assert '"version": "lite_stage3_baseline"' in result.stdout
+
+
+def test_lite_application_bootstraps_database_when_imported(tmp_path: pathlib.Path) -> None:
+    db_path = tmp_path / "lite_app_entry.db"
+    cache_dir = tmp_path / "lite_app_entry_cache"
+
+    result = _run_python_with_blocked_imports(
+        tmp_path=tmp_path,
+        blocked_modules={
+            "MySQLdb",
+            "apscheduler",
+            "dramatiq",
+            "flask_apscheduler",
+            "flask_profiler",
+            "mysql",
+            "pymysql",
+            "redis",
+        },
+        code=textwrap.dedent(
+            f"""
+            import json
+            import os
+            from pathlib import Path
+
+            from sqlalchemy import inspect, text
+
+            os.environ["LITE_DB_PATH"] = str(Path({str(db_path)!r}))
+            os.environ["LITE_XALPHA_CACHE_DIR"] = str(Path({str(cache_dir)!r}))
+            os.environ["LITE_XALPHA_CACHE_BACKEND"] = "csv"
+
+            import web.lite_application as lite_application
+            from web.models import db
+
+            engine = db.engines["snowball"]
+            table_names = set(inspect(engine).get_table_names())
+
+            with engine.connect() as conn:
+                version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
+
+            assert lite_application.app.config["_config_name"] == "lite"
+            assert version == "lite_stage3_baseline"
+            assert "tb_asset" in table_names
+            assert "tb_record" in table_names
+            print(json.dumps({{"version": version, "table_count": len(table_names)}}))
+            print("LITE_APPLICATION_OK")
+            """
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "LITE_APPLICATION_OK" in result.stdout
+    assert '"version": "lite_stage3_baseline"' in result.stdout
+
+
+def test_lite_gunicorn_check_config_passes(tmp_path: pathlib.Path) -> None:
+    pytest.importorskip("gunicorn")
+
+    db_path = tmp_path / "lite_gunicorn.db"
+    cache_dir = tmp_path / "lite_gunicorn_cache"
+    env = os.environ.copy()
+    pythonpath = [str(REPO_ROOT)]
+    if env.get("PYTHONPATH"):
+        pythonpath.append(env["PYTHONPATH"])
+
+    env["PYTHONPATH"] = os.pathsep.join(pythonpath)
+    env["LITE_DB_PATH"] = str(db_path)
+    env["LITE_XALPHA_CACHE_DIR"] = str(cache_dir)
+    env["LITE_XALPHA_CACHE_BACKEND"] = "csv"
+    env["LITE_FLASK_PORT"] = "5002"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "gunicorn.app.wsgiapp",
+            "--check-config",
+            "-c",
+            "web/gunicorn_lite.config.py",
+            "web.lite_application:app",
+        ],
+        cwd=REPO_ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr or result.stdout
+
+
 def test_scheduler_job_id_resolution_falls_back_when_cache_is_disabled() -> None:
     cache.reset()
     event = SimpleNamespace(job_id="demo-job")

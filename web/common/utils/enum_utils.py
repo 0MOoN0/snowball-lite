@@ -134,3 +134,84 @@ def record_enum_version(
             except Exception:
                 logger.error(f"写入枚举版本信息到 Redis 失败: {e}", exc_info=True)
         return False, payload
+
+
+def record_enum_version_to_sqlite(
+    key: str = VersionKeyEnum.ENUM.value,
+    scope: str = "global",
+    timestamp: Optional[int] = None,
+    logger: Optional[Any] = None,
+    merge: bool = False,
+) -> Tuple[bool, Dict[str, int]]:
+    """
+    将枚举版本信息写入 SQLite 的 system_settings 表。
+
+    lite 模式默认不启 Redis，这里提供与 Redis 版本键兼容的数据结构：
+    value 字段存储 JSON，例如 {"global": 1756120775}。
+    """
+    from web.models import db
+    from web.models.setting.system_settings import Setting
+
+    ts = int(timestamp if timestamp is not None else time.time())
+    payload: Dict[str, int] = {scope: ts}
+
+    try:
+        setting = db.session.query(Setting).filter_by(key=key).one_or_none()
+        if merge and setting and setting.value:
+            try:
+                prev = json.loads(setting.value)
+                if isinstance(prev, dict):
+                    prev[scope] = ts
+                    payload = prev
+            except Exception:
+                pass
+
+        if setting is None:
+            setting = Setting(
+                key=key,
+                value="",
+                setting_type="json",
+                group="runtime_version",
+                description="lite 模式枚举版本信息",
+                default_value="{}",
+            )
+            db.session.add(setting)
+
+        setting.value = json.dumps(payload, ensure_ascii=False)
+        setting.setting_type = "json"
+        setting.group = setting.group or "runtime_version"
+        if not setting.description:
+            setting.description = "lite 模式枚举版本信息"
+        if setting.default_value is None:
+            setting.default_value = "{}"
+
+        db.session.commit()
+        if logger:
+            logger.info(f"已写入枚举版本信息到 SQLite，key={key}, value={payload}")
+        return True, payload
+    except Exception as e:
+        db.session.rollback()
+        if logger:
+            logger.error(f"写入枚举版本信息到 SQLite 失败: {e}", exc_info=True)
+        return False, payload
+
+
+def load_enum_version_from_sqlite(
+    key: str = VersionKeyEnum.ENUM.value,
+) -> Dict[str, Any]:
+    """
+    从 SQLite 的 system_settings 表读取枚举版本信息。
+
+    返回值与 Redis 路径保持一致，统一为 dict；不存在时返回空 dict。
+    """
+    from web.models.setting.system_settings import Setting
+
+    setting = Setting.query.filter_by(key=key).one_or_none()
+    if setting is None or not setting.value:
+        return {}
+
+    payload = json.loads(setting.value)
+    if not isinstance(payload, dict):
+        raise ValueError("枚举版本数据不是有效的 JSON 对象")
+
+    return payload

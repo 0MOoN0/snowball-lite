@@ -52,3 +52,5 @@ logs/security/
 snowball_lite.db
 snowball_lite.db-shm
 snowball_lite.db-wal
+/data/
+*.bootstrap.lock
