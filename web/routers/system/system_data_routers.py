@@ -5,7 +5,7 @@
 @Author  ：Leon
 @Date    ：2024/10/5 21:40
 """
-from flask import Blueprint
+from flask import Blueprint, current_app
 from flask_restful import Api, Resource, reqparse
 
 from web.common.cache import cache
@@ -18,6 +18,12 @@ from web.weblogger import debug
 
 system_bp = Blueprint("system", __name__, url_prefix="/system")
 system_api = Api(system_bp)
+
+
+def _redis_boundary_message(action: str) -> str:
+    if current_app.config.get("_config_name") == "lite":
+        return f"lite 模式下不支持{action}"
+    return f"Redis 未启用，无法{action}"
 
 
 # 获取菜单
@@ -38,6 +44,8 @@ class SystemDataRouter(Resource):
         """
         # 记录debug详细日志，打印相关参数
         debug("设置并保存token，开始")
+        if not current_app.config.get("CACHE_AVAILABLE", False) or not cache.is_initialized():
+            return R.fail(msg=_redis_boundary_message("系统 token 读写"))
         parse = reqparse.RequestParser()
         parse.add_argument('xq_a_token', required=True)
         parse.add_argument('u', required=True)
@@ -67,6 +75,8 @@ class SystemDataRouter(Resource):
         """
         # 记录debug详细日志
         debug("获取token，开始")
+        if not current_app.config.get("CACHE_AVAILABLE", False) or not cache.is_initialized():
+            return R.fail(msg=_redis_boundary_message("系统 token 查询"))
         setting = {}
         # 获取token
         token = databox.get_token(webcons.DataBoxTokenKey.XQ_TOKEN)

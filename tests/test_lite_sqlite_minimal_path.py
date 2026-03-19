@@ -15,8 +15,6 @@ pytestmark = [pytest.mark.local, pytest.mark.integration]
 
 def test_lite_sqlite_minimal_path(lite_app):
     with lite_app.app_context():
-        db.create_all()
-
         default_engine = db.engine
         snowball_engine = db.engines["snowball"]
 

@@ -32,6 +32,37 @@ def upgrade():
     )
 
     op.create_table(
+        "tb_index_base",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("index_code", sa.String(length=20), nullable=False, unique=True),
+        sa.Column("index_name", sa.String(length=255), nullable=False),
+        sa.Column("index_type", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("investment_strategy", sa.Integer(), nullable=True, server_default="0"),
+        sa.Column("market", sa.Integer(), nullable=True, server_default="0"),
+        sa.Column("base_date", sa.Date(), nullable=True),
+        sa.Column("base_point", sa.Integer(), nullable=True),
+        sa.Column("currency", sa.Integer(), nullable=True, server_default="0"),
+        sa.Column("weight_method", sa.Integer(), nullable=True),
+        sa.Column("calculation_method", sa.Integer(), nullable=True),
+        sa.Column("index_status", sa.Integer(), nullable=False, server_default="1"),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("publisher", sa.String(length=100), nullable=True),
+        sa.Column("publish_date", sa.Date(), nullable=True),
+        sa.Column("create_time", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column("update_time", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column("discriminator", sa.String(length=50), nullable=False, server_default="base"),
+    )
+
+    op.create_table(
+        "tb_category",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("category_name", sa.String(length=50), nullable=False),
+        sa.Column("pid", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("ancestor", sa.String(length=255), nullable=True),
+        sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default="0"),
+    )
+
+    op.create_table(
         "tb_asset_exchange_fund",
         sa.Column("id", sa.Integer(), sa.ForeignKey("tb_asset.id"), primary_key=True),
         sa.Column("exchange_market", sa.String(length=16), nullable=False),
@@ -58,7 +89,7 @@ def upgrade():
         sa.Column("id", sa.Integer(), sa.ForeignKey("tb_asset_fund.id"), primary_key=True),
         sa.Column("tracking_index_code", sa.String(length=32), nullable=True),
         sa.Column("tracking_index_name", sa.String(length=128), nullable=True),
-        sa.Column("index_id", sa.Integer(), nullable=True),
+        sa.Column("index_id", sa.Integer(), sa.ForeignKey("tb_index_base.id"), nullable=True),
         sa.Column("primary_exchange", sa.String(length=16), nullable=True),
         sa.Column("dividend_frequency", sa.String(length=32), nullable=True),
         sa.Column("tracking_error", sa.Numeric(8, 6), nullable=True),
@@ -72,7 +103,7 @@ def upgrade():
         sa.Column("redemption_fee_rate", sa.Numeric(8, 6), nullable=True),
         sa.Column("nav_calculation_time", sa.Time(), nullable=True),
         sa.Column("trading_suspension_info", sa.Text(), nullable=True),
-        sa.Column("index_id", sa.Integer(), nullable=True),
+        sa.Column("index_id", sa.Integer(), sa.ForeignKey("tb_index_base.id"), nullable=True),
     )
 
     op.create_table(
@@ -88,6 +119,12 @@ def upgrade():
         sa.Column("create_time", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
         sa.Column("update_time", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
         sa.UniqueConstraint("provider_code", "provider_symbol", name="uk_provider_symbol"),
+    )
+
+    op.create_table(
+        "tb_asset_category",
+        sa.Column("asset_id", sa.Integer(), sa.ForeignKey("tb_asset.id"), primary_key=True, nullable=False),
+        sa.Column("category_id", sa.Integer(), sa.ForeignKey("tb_category.id"), primary_key=True, nullable=False),
     )
 
     op.create_table(
@@ -255,8 +292,76 @@ def upgrade():
         sa.Column("dividend_yield", sa.Integer(), nullable=True),
     )
 
+    op.create_table(
+        "tb_index_stock",
+        sa.Column("id", sa.Integer(), sa.ForeignKey("tb_index_base.id"), primary_key=True),
+        sa.Column("constituent_count", sa.Integer(), nullable=True),
+        sa.Column("market_cap", sa.Float(15, 2), nullable=True),
+        sa.Column("free_float_market_cap", sa.Float(15, 2), nullable=True),
+        sa.Column("average_pe", sa.Float(10, 2), nullable=True),
+        sa.Column("average_pb", sa.Float(10, 2), nullable=True),
+        sa.Column("dividend_yield", sa.Float(6, 4), nullable=True),
+        sa.Column("turnover_rate", sa.Float(6, 4), nullable=True),
+        sa.Column("volatility", sa.Float(6, 4), nullable=True),
+        sa.Column("beta", sa.Float(6, 4), nullable=True),
+        sa.Column("rebalance_frequency", sa.String(length=20), nullable=True),
+        sa.Column("last_rebalance_date", sa.Date(), nullable=True),
+        sa.Column("next_rebalance_date", sa.Date(), nullable=True),
+    )
+
+    op.create_table(
+        "tb_index_alias",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("index_id", sa.Integer(), sa.ForeignKey("tb_index_base.id"), nullable=False),
+        sa.Column("provider_code", sa.String(length=50), nullable=False),
+        sa.Column("provider_symbol", sa.String(length=100), nullable=False),
+        sa.Column("provider_name", sa.String(length=255), nullable=True),
+        sa.Column("is_primary", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("status", sa.Integer(), nullable=False, server_default="1"),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("create_time", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column("update_time", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.UniqueConstraint("provider_code", "provider_symbol", name="uk_provider_symbol"),
+    )
+
+    op.create_table(
+        "system_settings",
+        sa.Column("id", sa.Integer(), primary_key=True, comment="主键ID，自增"),
+        sa.Column("key", sa.String(length=100), nullable=False),
+        sa.Column("value", sa.Text(), nullable=False),
+        sa.Column("setting_type", sa.String(length=50), nullable=False),
+        sa.Column("group", sa.String(length=100), nullable=True, server_default="general"),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("default_value", sa.Text(), nullable=True),
+        sa.Column("created_time", sa.DateTime(), nullable=True, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column("updated_time", sa.DateTime(), nullable=True, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.UniqueConstraint("key", name="uk_system_settings_key"),
+    )
+
+    op.create_table(
+        "tb_notification",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("business_type", sa.SmallInteger(), nullable=False, server_default="0"),
+        sa.Column("notice_type", sa.SmallInteger(), nullable=False, server_default="0"),
+        sa.Column("notice_status", sa.SmallInteger(), nullable=False, server_default="0"),
+        sa.Column("content", sa.Text(), nullable=True),
+        sa.Column("timestamp", sa.DateTime(), nullable=True),
+        sa.Column("create_time", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column("update_time", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column("notice_level", sa.SmallInteger(), nullable=False, server_default="0"),
+        sa.Column("title", sa.String(length=255), nullable=False),
+        sa.Column("template_key", sa.String(length=100), nullable=True),
+    )
+
 
 def downgrade():
+    op.drop_table("tb_notification")
+    op.drop_table("system_settings")
+    op.drop_table("tb_index_alias")
+    op.drop_table("tb_index_stock")
+    op.drop_table("tb_index_base")
+    op.drop_table("tb_asset_category")
+    op.drop_table("tb_category")
     op.drop_table("tb_grid_trade_analysis_data")
     op.drop_table("tb_trade_analysis_data")
     op.drop_table("tb_grid_type_record")

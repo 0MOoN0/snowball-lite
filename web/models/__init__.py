@@ -2,14 +2,25 @@ from time import time
 import time as time_module
 from sqlalchemy import event
 import sqlalchemy.exc
-import pymysql
 import sqlparse  # 导入sqlparse库
 import re  # 导入正则表达式模块
+
+try:
+    import pymysql
+except ImportError:  # lite 路径不应该依赖 pymysql 包本身
+    pymysql = None
 
 from web.decorator.auto_registry import ensure_models_registered
 from web.models.base import db, migrate
 from web.weblogger import debug, warning, error, info
 from web.models import registry  # noqa: F401
+
+
+def _mysql_operational_errors():
+    errors = [sqlalchemy.exc.OperationalError]
+    if pymysql is not None:
+        errors.append(pymysql.err.OperationalError)
+    return tuple(errors)
 
 
 def check_database_connection(engine, bind_name=None, max_retries=3, retry_delay=2):
@@ -38,7 +49,7 @@ def check_database_connection(engine, bind_name=None, max_retries=3, retry_delay
                 )
                 return True
 
-        except (sqlalchemy.exc.OperationalError, pymysql.err.OperationalError) as e:
+        except _mysql_operational_errors() as e:
             error(f"数据库连接 {db_name} 失败 (尝试 {attempt + 1}/{max_retries}): {e}")
             if attempt < max_retries - 1:
                 warning(f"将在{retry_delay}秒后重试数据库连接...")

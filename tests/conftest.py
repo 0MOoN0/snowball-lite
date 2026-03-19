@@ -57,12 +57,13 @@ def lite_runtime_env(lite_runtime_paths):
 @pytest.fixture()
 def lite_app(lite_runtime_paths):
     from web import create_app
+    from web.lite_bootstrap import bootstrap_lite_database
     from web.models import db
 
     app = create_app("lite")
 
     with app.app_context():
-        db.create_all()
+        bootstrap_lite_database(app)
 
     yield app
 

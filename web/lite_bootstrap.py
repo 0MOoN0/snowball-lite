@@ -6,12 +6,14 @@ from alembic import command
 from alembic.config import Config
 
 
-LITE_STAGE3_REQUIRED_TABLES = {
+LITE_STAGE5_REQUIRED_TABLES = {
     "tb_asset",
     "tb_asset_code",
     "tb_asset_fund_daily_data",
     "tb_asset_fund_fee_rule",
     "tb_asset_holding_data",
+    "tb_asset_category",
+    "tb_category",
     "tb_grid",
     "tb_grid_type",
     "tb_grid_type_detail",
@@ -19,7 +21,15 @@ LITE_STAGE3_REQUIRED_TABLES = {
     "tb_record",
     "tb_trade_analysis_data",
     "tb_grid_trade_analysis_data",
+    "tb_index_base",
+    "tb_index_stock",
+    "tb_index_alias",
+    "tb_notification",
+    "system_settings",
 }
+
+# 阶段 3 的旧名字保留兼容，实际口径已经收口到阶段 5。
+LITE_STAGE3_REQUIRED_TABLES = LITE_STAGE5_REQUIRED_TABLES
 
 
 def _repo_root() -> Path:

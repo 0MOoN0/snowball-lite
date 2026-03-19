@@ -3,9 +3,13 @@ from __future__ import annotations
 import traceback
 import logging
 
-import pymysql
 import sqlalchemy
 from apscheduler.events import *
+
+try:
+    import pymysql
+except ImportError:  # lite 默认不需要 pymysql，MySQL 相关异常只在可用时处理
+    pymysql = None
 
 from web.common.cache import cache
 from web.common.cons import webcons
@@ -22,6 +26,13 @@ from web.scheduler import notice_scheduler
 
 # 全局变量，跟踪调度器是否已经初始化
 _scheduler_initialized = False
+
+
+def _mysql_operational_errors():
+    errors = [sqlalchemy.exc.OperationalError]
+    if pymysql is not None:
+        errors.append(pymysql.err.OperationalError)
+    return tuple(errors)
 
 # 运行级日志缓冲：零线程实现（方案1）
 class _RunLogBufferHandler(logging.Handler):
@@ -395,7 +406,7 @@ def verify_apscheduler_database(app):
                 debug("APScheduler数据库连接和表检查成功")
                 return True
 
-            except (sqlalchemy.exc.OperationalError, pymysql.err.OperationalError) as e:
+            except _mysql_operational_errors() as e:
                 error(f"APScheduler数据库连接失败: {e}")
                 return False
             except Exception as e:

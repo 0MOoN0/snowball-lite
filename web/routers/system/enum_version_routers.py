@@ -7,6 +7,7 @@
 @Description: 枚举版本管理接口
 """
 
+from flask import current_app
 from flask_restx import Resource, Namespace, fields
 from web.common.api_factory import get_api
 from web.common.utils import R
@@ -36,6 +37,12 @@ version_response_model = api_ns.model('VersionResponse', {
     'message': fields.String(description='响应消息'),
     'data': fields.Raw(description='版本数据，键为版本键，值为版本信息对象')
 })
+
+
+def _redis_boundary_message(action: str) -> str:
+    if current_app.config.get("_config_name") == "lite":
+        return f"lite 模式下不支持{action}"
+    return f"Redis 未启用，无法{action}"
 
 
 @api_ns.route("/versions")
@@ -85,6 +92,8 @@ class EnumVersionRouters(Resource):
         """
         try:
             debug("开始获取枚举版本信息")
+            if not current_app.config.get("CACHE_AVAILABLE", False) or not cache.is_initialized():
+                return R.fail(msg=_redis_boundary_message("枚举版本查询"))
             
             # 获取Redis客户端
             redis_client = cache.get_redis_client()
