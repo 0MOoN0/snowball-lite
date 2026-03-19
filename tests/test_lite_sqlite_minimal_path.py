@@ -3,22 +3,18 @@ from __future__ import annotations
 import time
 from datetime import datetime
 
+import pytest
 from sqlalchemy import text
 
-from web import create_app
 from web.models import db
 from web.models.asset.asset import Asset
 from web.models.notice.Notification import Notification
 from web.models.setting.system_settings import Setting
 
+pytestmark = [pytest.mark.local, pytest.mark.integration]
 
-def test_lite_sqlite_minimal_path(tmp_path, monkeypatch):
-    db_path = tmp_path / "snowball_lite.db"
-    monkeypatch.setenv("LITE_DB_PATH", str(db_path))
-
-    app = create_app("lite")
-
-    with app.app_context():
+def test_lite_sqlite_minimal_path(lite_app):
+    with lite_app.app_context():
         db.create_all()
 
         default_engine = db.engine

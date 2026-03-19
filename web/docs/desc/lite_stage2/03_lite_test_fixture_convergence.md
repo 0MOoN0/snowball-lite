@@ -1,48 +1,75 @@
-# 任务 3：Lite 测试基建收敛
+# 任务 3：Lite 测试基建收敛结果
 
-## 目标
+## 本轮做了什么
 
-把阶段一新增的 lite 测试再收敛一层，减少环境耦合和重复设置，让后续验证更稳定。
+阶段二把 lite 相关测试的公共环境准备收敛到了 `tests/conftest.py`。
 
-## 任务范围
+统一入口：
 
-- 收敛 lite 测试的环境变量设置
-- 明确哪些测试应该走 `tmp_path`
-- 明确哪些测试属于“纯单测”、哪些属于“受控集成验证”
+- `lite_runtime_paths`
+- `lite_runtime_env`
+- `lite_app`
 
-## 当前问题
+## 当前测试边界
 
-- lite 测试已经能避免污染仓库根目录，但测试入口还比较分散
-- 真实网络验证和本地打桩验证的边界还不够清晰
-- 还没有形成“第二阶段推荐怎么跑”的固定说明
+### 本地可重复验证
 
-## 关键文件
-
-- `tests/conftest.py`
 - `tests/test_lite_bootstrap_review.py`
 - `tests/test_lite_sqlite_minimal_path.py`
 - `tests/test_xalpha_databox_compat.py`
 - `tests/test_lite_smoke_validation_and_decision.py`
+- `tests/test_lite_sqlite_high_risk_models.py`
 
-## 执行步骤
+特点：
 
-1. 统一 lite 测试环境准备逻辑
-2. 区分纯本地测试和外部依赖测试
-3. 固定推荐执行命令
-4. 补一份简短测试说明
+- 不依赖外部网络
+- 默认可重复执行
+- 适合作为阶段二默认回归
 
-## 验收标准
+### 真实外部依赖验证
 
-- lite 测试环境准备不再重复散落
-- 测试分类清晰
-- 推荐执行命令明确
+- `tests/test_lite_real_databox_validation.py`
 
-## 非目标
+特点：
 
-- 不重建整个测试体系
-- 不把所有历史测试都改成 lite 兼容
+- 依赖真实第三方站点
+- 默认不执行
+- 需要显式设置 `LITE_RUN_REAL_DATABOX=1`
+- 已标记为 `manual`
 
-## 任务完成产物
+## 推荐命令
 
-- 一份 lite 测试运行说明
-- 一组更清晰的 lite 测试边界
+### 1. 阶段二默认回归
+
+```bash
+PYTHONPATH=. pytest -q \
+  tests/test_lite_bootstrap_review.py \
+  tests/test_lite_sqlite_minimal_path.py \
+  tests/test_xalpha_databox_compat.py \
+  tests/test_lite_smoke_validation_and_decision.py \
+  tests/test_lite_sqlite_high_risk_models.py \
+  tests/test_lite_real_databox_validation.py \
+  -m "not manual"
+```
+
+2026-03-19 结果：
+
+- `23 passed, 1 deselected`
+
+### 2. 真实 DataBox 验收
+
+```bash
+PYTHONPATH=. LITE_RUN_REAL_DATABOX=1 pytest -q tests/test_lite_real_databox_validation.py
+```
+
+2026-03-19 结果：
+
+- `4 passed`
+
+## 结论
+
+- lite 测试环境变量设置不再散落
+- 本地回归和真实外部依赖验证边界已经清楚
+- 阶段二推荐怎么跑，已经固定下来
+
+任务 3 已完成。

@@ -1,50 +1,53 @@
-# 任务 2：高风险 SQLite 模型验证
+# 任务 2：高风险 SQLite 模型验证结果
 
-## 目标
+## 本轮选择
 
-在阶段一最小链路基础上，把 SQLite 验证扩展到一组高风险模型，确认轻量版不是只在简单模型上可用。
+阶段二没有优先碰 scheduler，而是先验证两组风险更高的模型：
 
-## 任务范围
+1. `IndexBase/StockIndex + IndexAlias + AssetFundETF + AssetAlias`
+2. `TradeAnalysisData + GridTradeAnalysisData`
 
-- 挑一组高风险模型做专项验证
-- 重点验证建表、外键、多态、关联查询、最小 CRUD
-- 继续记录 SQLite blocker，但不做全量兼容
+原因：
 
-## 推荐优先模型
+- 第一组同时覆盖联合表继承、额外外键、关联查询、唯一约束
+- 第二组覆盖另一套 joined-table inheritance 和多态回读
+- 这两组更能说明 SQLite 不是只跑通了最小模型
 
-建议从这几组里选：
+## 本轮实现
 
-1. 联合表继承相关模型
-2. 多外键关联模型
-3. 分析类或调度日志类模型
+- 新增测试：`tests/test_lite_sqlite_high_risk_models.py`
 
-## 关键文件
+## 推荐运行方式
 
-- `web/models/index/*`
-- `web/models/asset/*`
-- `web/models/analysis/*`
-- `web/models/scheduler/*`
-- `tests/` 下新增的 SQLite 专项测试
+```bash
+PYTHONPATH=. pytest -q tests/test_lite_sqlite_high_risk_models.py
+```
 
-## 执行步骤
+2026-03-19 结果：
 
-1. 先挑 1 到 2 组高风险模型
-2. 建立最小建表和写入脚本
-3. 验证关联查询和更新时间字段
-4. 记录新增 blocker
+- `3 passed`
 
-## 验收标准
+## 已验证通过
 
-- 至少 1 组高风险模型完成专项验证
-- 至少 1 条复杂关联或多态链路被覆盖
-- blocker 被单独记录，不混进结论里
+### 1. 资产 / 指数继承链
 
-## 非目标
+- `StockIndex` 可以完成建表、插入、查询
+- `IndexAlias` 关系查询正常
+- `AssetFundETF` 可以通过 `index_id` 关联 `StockIndex`
+- 用 `Asset.query` 查询时，能正确多态回读到 `AssetFundETF`
+- 更新基类字段和子类字段后，都能正确持久化
 
-- 不要求所有模型一次性兼容
-- 不要求迁移脚本同步完成
+### 2. 约束生效
 
-## 任务完成产物
+- 重复的 `IndexAlias(provider_code, provider_symbol)` 会触发 `IntegrityError`
+- 无效的 `AssetFundETF.index_id` 会触发 `IntegrityError`
 
-- 一组高风险模型验证结果
-- 一份更新后的 SQLite blocker 清单
+### 3. 分析模型继承链
+
+- `GridTradeAnalysisData` 可以正常写入 SQLite
+- 用 `TradeAnalysisData.query` 回读时，多态装载正常
+- 子类字段更新后再次查询能正确返回
+
+## 结论
+
+任务 2 已完成。

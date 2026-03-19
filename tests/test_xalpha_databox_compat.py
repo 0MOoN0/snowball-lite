@@ -19,13 +19,7 @@ from web.databox.adapter.data.xa_service import XaServiceAdapter
 from xalpha.info import fundinfo as fundinfo_cls
 from xalpha.universal import cachedio
 
-
-@pytest.fixture(autouse=True)
-def _lite_runtime_defaults(tmp_path, monkeypatch):
-    monkeypatch.setenv("LITE_DB_PATH", str(tmp_path / "snowball_lite.db"))
-    monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", str(tmp_path / "lite_xalpha_cache"))
-    monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "csv")
-    yield
+pytestmark = [pytest.mark.local, pytest.mark.usefixtures("lite_runtime_paths")]
 
 
 def test_cachedio_sql_backend_bootstraps_missing_sqlite_table(tmp_path):

@@ -1,59 +1,52 @@
-# 轻量版第二阶段规划
+# 轻量版第二阶段结果总览
 
-## 当前背景
+## 结果
 
-阶段一已经完成，当前已经具备：
+阶段二已经完成，四项任务都已收口：
 
-- Lite 启动骨架
-- SQLite 最小可用链路
-- `xalpha` / DataBox 最小兼容链路
-- 2 到 3 条核心接口 smoke 验证
+1. 真实 DataBox 验证已完成
+2. 高风险 SQLite 模型验证已完成
+3. lite 测试基建收敛已完成
+4. 第二阶段结论与下一步建议已完成
 
-但这些结果还更偏“spike 可行”，还不能直接等同于“轻量版可以长期稳定使用”。
+## 阶段二归档
 
-## 第二阶段目标
-
-第二阶段的目标不是继续铺更多功能，而是把已经验证过的最小链路往“更真实、更稳定、更可维护”推进一步。
-
-重点收口 3 件事：
-
-1. 补一条更真实的 DataBox / 第三方数据验证链路
-2. 扩大 SQLite 覆盖到高风险模型，而不是只停留在最小 happy path
-3. 把 lite 测试和验证方式再收敛，降低后续维护成本
-
-## 第二阶段不做什么
-
-- 不做全量 SQLite 迁移
-- 不整理完整 Alembic 历史
-- 不追求全接口、全测试覆盖
-- 不马上拆成独立项目
-
-## 任务拆分
+阶段二现在统一归档在 `web/docs/desc/lite_stage2/`：
 
 - `01_real_databox_validation.md`
 - `02_sqlite_high_risk_models.md`
+- `02_sqlite_blockers.md`
 - `03_lite_test_fixture_convergence.md`
 - `04_stage2_acceptance_and_decision.md`
+- `05_incremental_gate_commit_check.md`
 
-## 第二阶段验收标准
+这样后面回看时，不需要再分别去找 task 和 review 目录。
 
-- 至少 1 条更真实的 DataBox 链路被验证
-- 至少 1 组高风险 SQLite 模型完成专项验证
-- lite 测试入口和运行环境进一步收敛
-- 形成第二阶段结论：继续推进 / 暂停 / 转向拆分项目
+## 本轮新增测试
 
-## 推荐节奏
+- `tests/test_lite_real_databox_validation.py`
+- `tests/test_lite_sqlite_high_risk_models.py`
 
-建议按这个顺序做：
+## 本轮新增辅助模块
 
-1. 先做真实 DataBox 验证
-2. 再补高风险 SQLite 模型
-3. 再收敛测试基建
-4. 最后输出第二阶段结论
+- `web/lite_validation.py`
 
-## 预期产物
+## 当前结论
 
-- 一份更真实的 DataBox 验证记录
-- 一份高风险 SQLite 模型验证记录
-- 一份 lite 测试收敛说明
-- 一份第二阶段收口结论
+- lite 已经明显超过“只会跑最小 happy path”的阶段
+- 但这不等于“整个仓库已经完成 SQLite 迁移”
+- 下一步更适合继续补业务链路，不适合现在就宣称全面 SQLite 化
+
+## 验收与审查摘要
+
+2026-03-19 本轮增量验收结果：
+
+- 默认回归：`23 passed, 1 deselected`
+- 真实 DataBox 验收：`4 passed`
+- 结果标签：`incremental-pass-only`
+
+代码审查结论：
+
+- 已对 lite stage2 相关测试、夹具、辅助模块和文档做过审查
+- 当前没有 medium 或 high 等级问题
+- 已知剩余风险主要还是第三方链路波动和 SQLite Decimal warning

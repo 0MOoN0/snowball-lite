@@ -4,33 +4,12 @@ from unittest.mock import patch
 
 import pytest
 
-from web import create_app
 from web.models import db
 from web.models.asset.asset import Asset
 from web.models.asset.asset_alias import AssetAlias
 from web.models.record.record import Record
 
-
-@pytest.fixture()
-def lite_app(tmp_path, monkeypatch):
-    db_path = tmp_path / "snowball_lite_smoke.db"
-    cache_dir = tmp_path / "lite_xalpha_cache"
-
-    monkeypatch.setenv("LITE_DB_PATH", str(db_path))
-    monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", str(cache_dir))
-
-    app = create_app("lite")
-
-    with app.app_context():
-        db.create_all()
-
-    yield app
-
-    with app.app_context():
-        db.session.remove()
-
-    for engine in db.engines.values():
-        engine.dispose()
+pytestmark = [pytest.mark.local, pytest.mark.integration]
 
 
 def _seed_asset(asset_name: str = "Lite 冒烟资产") -> int:

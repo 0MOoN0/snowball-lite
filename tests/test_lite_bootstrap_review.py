@@ -5,11 +5,14 @@ import sys
 import textwrap
 from types import SimpleNamespace
 
+import pytest
+
 from web.common.cache import cache
 from web.scheduler import _resolve_job_id
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+pytestmark = pytest.mark.local
 
 
 def _run_python_with_blocked_imports(tmp_path: pathlib.Path, blocked_modules: set[str], code: str) -> subprocess.CompletedProcess[str]:
