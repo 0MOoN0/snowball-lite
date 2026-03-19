@@ -1,13 +1,15 @@
-import pytest
-import pytest
-from sqlalchemy import event, create_engine, text
-from sqlalchemy.orm import sessionmaker, scoped_session, Session
+from contextlib import contextmanager
 import os
+from pathlib import Path
 from urllib.parse import quote_plus
 
+import pytest
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
+
 from web import create_app
+from web.lite_bootstrap import bootstrap_lite_database
 from web.models import db
-from web import settings
 from web.models.setting.system_settings import Setting
 
 """
@@ -83,6 +85,104 @@ def rollback_session(app):
             connection.close()
     except Exception:
         pass  # 忽略连接关闭时的异常
+
+
+@contextmanager
+def _temporary_lite_runtime_env(root: Path):
+    db_path = root / "snowball_lite_stage3.db"
+    cache_dir = root / "lite_xalpha_cache"
+    old_env = {
+        "LITE_DB_PATH": os.environ.get("LITE_DB_PATH"),
+        "LITE_XALPHA_CACHE_DIR": os.environ.get("LITE_XALPHA_CACHE_DIR"),
+        "LITE_XALPHA_CACHE_BACKEND": os.environ.get("LITE_XALPHA_CACHE_BACKEND"),
+    }
+
+    os.environ["LITE_DB_PATH"] = str(db_path)
+    os.environ["LITE_XALPHA_CACHE_DIR"] = str(cache_dir)
+    os.environ["LITE_XALPHA_CACHE_BACKEND"] = "csv"
+
+    try:
+        yield {
+            "root": root,
+            "db_path": db_path,
+            "cache_dir": cache_dir,
+        }
+    finally:
+        for key, value in old_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+@pytest.fixture(scope="session")
+def lite_webtest_runtime(tmp_path_factory):
+    root = Path(tmp_path_factory.mktemp("lite-webtest-stage3"))
+    with _temporary_lite_runtime_env(root) as runtime:
+        yield runtime
+
+
+@pytest.fixture(scope="session")
+def lite_webtest_app(lite_webtest_runtime):
+    app = create_app(config_name="lite")
+
+    with app.app_context():
+        bootstrap_lite_database(app)
+
+    yield app
+
+    with app.app_context():
+        db.session.remove()
+
+    for engine in db.engines.values():
+        engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def lite_webtest_client(lite_webtest_app):
+    return lite_webtest_app.test_client()
+
+
+@pytest.fixture(scope="function")
+def lite_rollback_session(lite_webtest_app):
+    engine = db.engines.get("snowball", db.engine)
+    connection = engine.connect()
+    transaction = connection.begin()
+
+    session_factory = sessionmaker(bind=connection, query_cls=db.Query)
+    session = scoped_session(session_factory)
+    original_session = db.session
+
+    original_remove = session.remove
+
+    def enhanced_remove():
+        original_remove()
+        if not connection.closed:
+            connection.close()
+
+    session.remove = enhanced_remove
+    db.session = session
+
+    yield db.session
+
+    try:
+        session.remove()
+    except Exception:
+        pass
+
+    try:
+        if transaction.is_active:
+            transaction.rollback()
+    except Exception:
+        pass
+
+    try:
+        if not connection.closed:
+            connection.close()
+    except Exception:
+        pass
+
+    db.session = original_session
 
 
 @pytest.fixture(scope="session")

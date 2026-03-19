@@ -72,6 +72,7 @@ def get_migration_directory(config_class_name):
         "ProdConfig": "migrations_snowball",
         "LocalDevTest": "migrations_snowball_dev",  # 本地开发测试使用开发环境迁移
         "TestingConfig": "migrations_snowball_test",
+        "LiteConfig": "migrations_snowball_lite",
     }
 
     directory = migration_mapping.get(config_class_name, "migrations_snowball_dev")
@@ -216,18 +217,23 @@ def register_engine_log(engine, slow_query_threshold=None):
         # 设置默认的慢查询阈值
         long_query_time = 1.0  # 默认值
 
-        # 尝试获取long_query_time参数
-        try:
-            # 使用SQLAlchemy 2.0兼容的方式执行查询
-            with engine.connect() as conn:
-                result = conn.execute(
-                    sqlalchemy.text("show variables like 'long_query_time'")
-                ).fetchone()
-                if result:
-                    long_query_time = float(result[1])
-                    info(f"成功获取long_query_time参数: {long_query_time}")
-        except Exception as e:
-            warning(f"无法获取long_query_time参数，使用默认值 {long_query_time}: {e}")
+        if engine.dialect.name != "mysql":
+            info(
+                f"数据库方言 {engine.dialect.name} 不支持 MySQL 慢查询变量探测，使用默认阈值: {long_query_time}"
+            )
+        else:
+            # 尝试获取long_query_time参数
+            try:
+                # 使用SQLAlchemy 2.0兼容的方式执行查询
+                with engine.connect() as conn:
+                    result = conn.execute(
+                        sqlalchemy.text("show variables like 'long_query_time'")
+                    ).fetchone()
+                    if result:
+                        long_query_time = float(result[1])
+                        info(f"成功获取long_query_time参数: {long_query_time}")
+            except Exception as e:
+                warning(f"无法获取long_query_time参数，使用默认值 {long_query_time}: {e}")
 
     def format_sql_with_params(statement, parameters):
         """

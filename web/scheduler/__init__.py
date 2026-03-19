@@ -377,26 +377,20 @@ def verify_apscheduler_database(app):
             debug(f"APScheduler使用SQLAlchemyJobStore，URL: {default_jobstore.url}")
 
             # 检查数据库表是否存在
+            engine = None
             try:
-                # 使用engine执行简单查询
-                from sqlalchemy import create_engine, text
-
-                engine = create_engine(default_jobstore.url)
+                engine = sqlalchemy.create_engine(default_jobstore.url)
 
                 # 首先测试连接
-                conn = engine.connect()
-                conn.close()
+                with engine.connect():
+                    pass
 
-                # 检查apscheduler_jobs表是否存在
-                with engine.connect() as conn:
-                    tables = conn.execute(
-                        text("SHOW TABLES LIKE 'apscheduler_jobs'")
-                    ).fetchall()
-                    if not tables:
-                        warning(
-                            "APScheduler的任务表(apscheduler_jobs)不存在，可能需要初始化数据库"
-                        )
-                        return False
+                inspector = sqlalchemy.inspect(engine)
+                if not inspector.has_table("apscheduler_jobs"):
+                    warning(
+                        "APScheduler的任务表(apscheduler_jobs)不存在，可能需要初始化数据库"
+                    )
+                    return False
 
                 debug("APScheduler数据库连接和表检查成功")
                 return True
@@ -408,6 +402,9 @@ def verify_apscheduler_database(app):
                 error(f"APScheduler数据库检查过程中发生未知错误: {e}")
                 error(traceback.format_exc())
                 return False
+            finally:
+                if engine is not None:
+                    engine.dispose()
 
     except Exception as e:
         error(f"验证APScheduler数据库时发生错误: {e}")

@@ -53,6 +53,28 @@ class TestBaseWithRollback(object):
     pass
 
 
+@pytest.mark.usefixtures('lite_webtest_app', 'lite_webtest_client', 'lite_rollback_session')
+class TestBaseLiteWithRollback(object):
+    """
+    stage3 SQLite 集成测试基类
+
+    使用场景：
+    - 第三阶段专项 SQLite 集成测试
+    - 需要复用 web/webtest 现有测试组织方式，但不依赖 MySQL server
+    - 需要和 lite 专用 bootstrap 及临时缓存目录配套运行
+
+    包含的 fixtures：
+    - lite_webtest_app: stage3 专用 lite 应用实例，scope 为 session
+    - lite_webtest_client: stage3 专用测试客户端，scope 为 session
+    - lite_rollback_session: 绑定 SQLite 连接的事务回滚会话，scope 为 function
+
+    注意事项：
+    - 仅面向 stage3 选定范围，不替换原有 MySQL webtest 基类
+    - SQLite 临时库和缓存目录都由 fixture 统一提供
+    """
+    pass
+
+
 @pytest.mark.usefixtures('test_db_app', 'test_db_session')
 class TestBaseForAssetModels(object):
     """

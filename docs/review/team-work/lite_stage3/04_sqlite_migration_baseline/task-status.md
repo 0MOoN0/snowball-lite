@@ -1,0 +1,21 @@
+# Task Status
+
+- source doc path: `web/docs/task/lite_stage3/04_sqlite_migration_baseline.md`
+- current status: `completed`
+- current round: `1`
+- files touched:
+  - `web/lite_bootstrap.py`
+  - `migrations_snowball_lite/README`
+  - `migrations_snowball_lite/alembic.ini`
+  - `migrations_snowball_lite/env.py`
+  - `migrations_snowball_lite/script.py.mako`
+  - `migrations_snowball_lite/versions/lite_stage3_baseline.py`
+  - `web/models/__init__.py`
+  - `web/webtest/stage3/test_task04_lite_migration_baseline.py`
+- commands run:
+  - `pytest web/webtest/stage3 -q`
+  - `pytest tests/test_lite_sqlite_minimal_path.py tests/test_lite_sqlite_high_risk_models.py tests/test_lite_bootstrap_review.py -q`
+- latest blockers:
+  - 当前 baseline 只覆盖 stage3 所需核心表，不是全量 lite schema
+- next action: `如果下一阶段要扩大 lite 默认能力，需要继续扩展 baseline 覆盖面并补对应回归`
+- review report: `docs/review/team-work/lite_stage3/round-01-review.md`
