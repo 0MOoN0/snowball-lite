@@ -5,7 +5,7 @@
 - 结论：继续推进
 - 推进方式：继续做受控范围内的 SQLite 扩圈
 - 不建议现在做的事：不建议立刻把阶段三结果解读成“全仓库 SQLite 已完成”
-- 相关总结：`docs/review/team-work/lite_stage3/requirement-summary.md`
+- 代码审查：已完成，review 工件已清理
 
 ## 目标
 

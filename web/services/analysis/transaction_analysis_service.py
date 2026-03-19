@@ -282,6 +282,12 @@ class TradeAnalysisService(ABC):
         grid_trade_analysis.up_sold_percent, grid_trade_analysis.down_bought_percent = (
             self.get_bought_and_sell_percent(grid_type_details, net_value)
         )
+        grid_trade_analysis.up_sold_percent = self._normalize_percent_storage_value(
+            grid_trade_analysis.up_sold_percent
+        )
+        grid_trade_analysis.down_bought_percent = self._normalize_percent_storage_value(
+            grid_trade_analysis.down_bought_percent
+        )
 
         # 计算待出网次数
         grid_trade_analysis.holding_times = len(
@@ -409,6 +415,14 @@ class TradeAnalysisService(ABC):
             if net_value > purchase_price_decimal:
                 bought = (net_value - purchase_price_decimal) / net_value * 10000
         return sell, bought
+
+    @staticmethod
+    def _normalize_percent_storage_value(value):
+        if value is None:
+            return None
+        if isinstance(value, Decimal):
+            return int(round(value))
+        return int(round(value))
 
 
 class AmountTransactionAnalysisService(TradeAnalysisService):
@@ -864,8 +878,12 @@ class GridTransactionAnalysisService(TradeAnalysisService):
         existing_data.sell_times = total_sell_times
         existing_data.estimate_maximum_occupancy = total_estimate_maximum_occupancy
         existing_data.holding_times = total_holding_times
-        existing_data.up_sold_percent = min_up_sold_percent
-        existing_data.down_bought_percent = min_down_bought_percent
+        existing_data.up_sold_percent = TradeAnalysisService._normalize_percent_storage_value(
+            min_up_sold_percent
+        )
+        existing_data.down_bought_percent = TradeAnalysisService._normalize_percent_storage_value(
+            min_down_bought_percent
+        )
         existing_data.record_date = today
         return existing_data
 

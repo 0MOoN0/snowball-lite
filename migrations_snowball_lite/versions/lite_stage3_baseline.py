@@ -32,6 +32,65 @@ def upgrade():
     )
 
     op.create_table(
+        "tb_asset_exchange_fund",
+        sa.Column("id", sa.Integer(), sa.ForeignKey("tb_asset.id"), primary_key=True),
+        sa.Column("exchange_market", sa.String(length=16), nullable=False),
+        sa.Column("sub_type", sa.String(length=16), nullable=False),
+        sa.Column("tracking_index", sa.String(length=128), nullable=True),
+    )
+
+    op.create_table(
+        "tb_asset_fund",
+        sa.Column("id", sa.Integer(), sa.ForeignKey("tb_asset.id"), primary_key=True),
+        sa.Column("fund_type", sa.String(length=32), nullable=False),
+        sa.Column("trading_mode", sa.String(length=32), nullable=False),
+        sa.Column("fund_company", sa.String(length=128), nullable=True),
+        sa.Column("fund_manager", sa.String(length=128), nullable=True),
+        sa.Column("establishment_date", sa.Date(), nullable=True),
+        sa.Column("fund_scale", sa.Numeric(20, 4), nullable=True),
+        sa.Column("fund_status", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("investment_objective", sa.Text(), nullable=True),
+        sa.Column("investment_strategy", sa.Text(), nullable=True),
+    )
+
+    op.create_table(
+        "tb_asset_fund_etf",
+        sa.Column("id", sa.Integer(), sa.ForeignKey("tb_asset_fund.id"), primary_key=True),
+        sa.Column("tracking_index_code", sa.String(length=32), nullable=True),
+        sa.Column("tracking_index_name", sa.String(length=128), nullable=True),
+        sa.Column("index_id", sa.Integer(), nullable=True),
+        sa.Column("primary_exchange", sa.String(length=16), nullable=True),
+        sa.Column("dividend_frequency", sa.String(length=32), nullable=True),
+        sa.Column("tracking_error", sa.Numeric(8, 6), nullable=True),
+    )
+
+    op.create_table(
+        "tb_asset_fund_lof",
+        sa.Column("id", sa.Integer(), sa.ForeignKey("tb_asset_fund.id"), primary_key=True),
+        sa.Column("listing_exchange", sa.String(length=16), nullable=True),
+        sa.Column("subscription_fee_rate", sa.Numeric(8, 6), nullable=True),
+        sa.Column("redemption_fee_rate", sa.Numeric(8, 6), nullable=True),
+        sa.Column("nav_calculation_time", sa.Time(), nullable=True),
+        sa.Column("trading_suspension_info", sa.Text(), nullable=True),
+        sa.Column("index_id", sa.Integer(), nullable=True),
+    )
+
+    op.create_table(
+        "tb_asset_alias",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("asset_id", sa.Integer(), nullable=False),
+        sa.Column("provider_code", sa.String(length=50), nullable=False),
+        sa.Column("provider_symbol", sa.String(length=100), nullable=False),
+        sa.Column("provider_name", sa.String(length=255), nullable=True),
+        sa.Column("is_primary", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("status", sa.Integer(), nullable=False, server_default="1"),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("create_time", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column("update_time", sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.UniqueConstraint("provider_code", "provider_symbol", name="uk_provider_symbol"),
+    )
+
+    op.create_table(
         "tb_asset_code",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column("asset_id", sa.Integer(), nullable=False),
@@ -141,6 +200,17 @@ def upgrade():
     )
 
     op.create_table(
+        "tb_trade_reference",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("record_id", sa.Integer(), nullable=False),
+        sa.Column("group_type", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("group_id", sa.Integer(), nullable=False),
+        sa.Column("create_time", sa.DateTime(), nullable=True, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column("update_time", sa.DateTime(), nullable=True, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.UniqueConstraint("record_id", "group_type", "group_id", name="uk_record_group"),
+    )
+
+    op.create_table(
         "tb_grid_type_record",
         sa.Column("grid_type_id", sa.Integer(), nullable=False),
         sa.Column("record_id", sa.Integer(), nullable=False),
@@ -191,6 +261,7 @@ def downgrade():
     op.drop_table("tb_trade_analysis_data")
     op.drop_table("tb_grid_type_record")
     op.drop_table("tb_record")
+    op.drop_table("tb_trade_reference")
     op.drop_index("uk_grid_type_gear", table_name="tb_grid_type_detail")
     op.drop_table("tb_grid_type_detail")
     op.drop_table("tb_grid_type")
@@ -198,5 +269,10 @@ def downgrade():
     op.drop_table("tb_asset_holding_data")
     op.drop_table("tb_asset_fund_fee_rule")
     op.drop_table("tb_asset_fund_daily_data")
+    op.drop_table("tb_asset_alias")
+    op.drop_table("tb_asset_fund_lof")
+    op.drop_table("tb_asset_fund_etf")
+    op.drop_table("tb_asset_fund")
+    op.drop_table("tb_asset_exchange_fund")
     op.drop_table("tb_asset_code")
     op.drop_table("tb_asset")

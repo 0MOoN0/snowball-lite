@@ -3,10 +3,10 @@
 ## 归档说明
 
 - 归档时间：`2026-03-19`
-- 归档来源：`web/docs/task/lite_stage3/00_stage3_overview.md`
+- 归档来源：阶段 3 任务目录（原 task 文档已清理）
 - 当前状态：已完成
 - 阶段结论：继续推进，但只建议做受控范围内的 SQLite 扩圈，不建议现在就宣称“全仓库 SQLite 化”
-- 相关总结：`docs/review/team-work/lite_stage3/requirement-summary.md`
+- 代码审查：已完成，review 工件已清理
 
 ## 本阶段实际结果
 

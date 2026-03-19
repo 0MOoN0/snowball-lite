@@ -106,7 +106,15 @@ class GridAnalysisResultRouters(Resource):
         """
         try:
             # 查询数据
-            data = GridTradeAnalysisData.query.filter_by(grid_id=grid_id).first()
+            data = (
+                GridTradeAnalysisData.query.filter_by(grid_id=grid_id)
+                .filter(
+                    GridTradeAnalysisData.business_type
+                    == GridTradeAnalysisData.get_business_type_enum().GRID_ANALYSIS.value
+                )
+                .order_by(GridTradeAnalysisData.record_date.desc())
+                .first()
+            )
             if not data:
                 return R.fail(msg="未找到对应的网格分析数据")
 

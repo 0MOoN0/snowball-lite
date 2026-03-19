@@ -63,7 +63,7 @@ class AssetService:
         # 获取日线数据
         if code_xq is not None:
             xq_data_df = databox.fetch_online_daily_data(code_xq)
-            if xq_data_df and ttjj_data_df:
+            if xq_data_df is not None and len(xq_data_df) > 0 and len(ttjj_data_df) > 0:
                 # 合并数据，显示两边的数据，key为date，并根据date排序
                 daily_data_df = pd.merge(ttjj_data_df, xq_data_df, how='outer', on=['date'], sort='date')
         # 当天天基金数据或雪球数据不存在时，需要将天天基金或雪球数据中的一个作为日线数据
@@ -78,7 +78,10 @@ class AssetService:
         # 获取持仓数据
         if code_ttjj is None:
             logger.info(
-                'asset_id: {asset_id} 资产数据添加成功，由于基金代码数据不足，因此无法获取持仓信息'.format(asset_id))
+                'asset_id: {asset_id} 资产数据添加成功，由于基金代码数据不足，因此无法获取持仓信息'.format(
+                    asset_id=asset_id
+                )
+            )
             return
         # 获取最近一次的持仓信息，如果不满第一季度的日期，就改为获取上一年最后一个季度的数据，季度从1开始
         today = datetime.today()
@@ -91,7 +94,7 @@ class AssetService:
             # 获取再上一个季度的持仓信息，如果持仓信息仍不存在，结束方法
             position_df = fund_info.get_stock_holdings(year, season=quarter)
             if position_df is None or len(position_df) == 0:
-                logger.info('asset_id: {asset_id} 股票持仓信息为空'.format(asset_id))
+                logger.info('asset_id: {asset_id} 股票持仓信息为空'.format(asset_id=asset_id))
                 db.session.commit()
                 return
         positions = []

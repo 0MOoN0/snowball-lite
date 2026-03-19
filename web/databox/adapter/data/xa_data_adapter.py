@@ -304,23 +304,31 @@ class XaDataAdapter(DataBoxDataAdapter, XaService):
                 info(f"开始获取代码 {code_ttjj} 的天天基金日线数据")
                 # 获取天天基金代码，如果传入的天天基金代码为空，则使用缓存中的天天基金代码
                 fund_info = self.fund_info_cache.get(code_ttjj)
+                price: DataFrame = None
+                ttjj_price = None
+                if fund_info is not None:
+                    price = fund_info.price.copy(deep=True)
+                    ttjj_price = price.loc[
+                        (price.date >= start_date) & (price.date <= end_date)
+                    ].copy()
                 # 判断日期是否存在
-                if fund_info is None or fund_info.price.loc[
-                    (fund_info.price.date >= start_date) & (fund_info.price.date <= end_date)].empty:
+                if fund_info is None or ttjj_price.empty:
                     info(f"基金 {code_ttjj} 的缓存中无指定日期范围数据，从网络获取")
                     fund = self.fundinfo(code=code_ttjj)
-                    price: DataFrame = fund.price
+                    price = fund.price.copy(deep=True)
                     self.fund_info_cache.update({code_ttjj: fund})
                     # 再次检查
-                    if not price.loc[(price.date >= start_date) & (price.date <= end_date)].empty:
-                        ttjj_df = price.loc[(price.date >= start_date) & (price.date <= end_date)]
-                        info(f"成功获取基金 {code_ttjj} 的日线数据，记录数: {len(ttjj_df)}")
-                        # 修改字段
-                        ttjj_df.rename(columns={'date': 'f_date', 'netvalue': 'f_netvalue', 'totvalue': 'f_totvalue',
-                                                'comment': 'f_comment'},
-                                       inplace=True)
+                    ttjj_price = price.loc[(price.date >= start_date) & (price.date <= end_date)].copy()
+                    if not ttjj_price.empty:
+                        info(f"成功获取基金 {code_ttjj} 的日线数据，记录数: {len(ttjj_price)}")
                     else:
                         info(f"基金 {code_ttjj} 在指定日期范围内无日线数据")
+                if ttjj_price is not None and not ttjj_price.empty:
+                    ttjj_df = ttjj_price
+                    # 修改字段
+                    ttjj_df.rename(columns={'date': 'f_date', 'netvalue': 'f_netvalue', 'totvalue': 'f_totvalue',
+                                            'comment': 'f_comment'},
+                                   inplace=True)
             # 获取雪球日线数据
             if code_xq:
                 info(f"开始获取代码 {code_xq} 的雪球日线数据")
