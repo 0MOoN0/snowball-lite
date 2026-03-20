@@ -56,3 +56,10 @@ snowball_lite.db-wal
 /data/
 /web/data/
 *.bootstrap.lock
+
+# Frontend workspace
+node_modules/
+apps/frontend/dist/
+apps/frontend/dist-dev/
+apps/frontend/dist-pro/
+apps/frontend/dist-test/

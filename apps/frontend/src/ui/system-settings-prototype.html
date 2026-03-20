@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设置 - Snow View Admin</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            background-color: #f5f7fa;
+            color: #303133;
+            line-height: 1.6;
+        }
+
+        .settings-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .settings-header {
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            border: 1px solid #ebeef5;
+        }
+
+        .settings-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #303133;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .settings-subtitle {
+            color: #909399;
+            font-size: 14px;
+        }
+
+        .settings-main {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .settings-sidebar {
+            width: 240px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            border: 1px solid #ebeef5;
+            overflow: hidden;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+        }
+
+        .menu-item {
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            color: #606266;
+            text-decoration: none;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .menu-link:hover {
+            background-color: #f5f7fa;
+            color: #409eff;
+        }
+
+        .menu-link.active {
+            background-color: #ecf5ff;
+            color: #409eff;
+            border-right: 3px solid #409eff;
+        }
+
+        .menu-icon {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+        }
+
+        .settings-content {
+            flex: 1;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            border: 1px solid #ebeef5;
+            min-height: 600px;
+        }
+
+        .content-header {
+            padding: 24px;
+            border-bottom: 1px solid #ebeef5;
+        }
+
+        .content-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #303133;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .content-description {
+            color: #909399;
+            font-size: 14px;
+        }
+
+        .content-body {
+            padding: 24px;
+        }
+
+        .setting-section {
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #303133;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f2f5;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-label {
+            flex: 1;
+        }
+
+        .label-title {
+            font-size: 14px;
+            color: #303133;
+            margin-bottom: 4px;
+        }
+
+        .label-description {
+            font-size: 12px;
+            color: #909399;
+        }
+
+        .setting-control {
+            min-width: 200px;
+            text-align: right;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: 1px solid #dcdfe6;
+            background: #fff;
+            color: #606266;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            color: #409eff;
+            border-color: #c6e2ff;
+            background-color: #ecf5ff;
+        }
+
+        .btn-primary {
+            background: #409eff;
+            border-color: #409eff;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #66b1ff;
+            border-color: #66b1ff;
+        }
+
+        .btn-danger {
+            background: #f56c6c;
+            border-color: #f56c6c;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #f78989;
+            border-color: #f78989;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #dcdfe6;
+            transition: .3s;
+            border-radius: 22px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #409eff;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        .input-field {
+            padding: 8px 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 200px;
+            transition: border-color 0.3s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #409eff;
+        }
+
+        .select-field {
+            padding: 8px 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 200px;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .color-picker {
+            width: 40px;
+            height: 32px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #409eff;
+        }
+
+        .preset-colors {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .color-item {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-item:hover {
+            border-color: #409eff;
+            transform: scale(1.1);
+        }
+
+        .actions-bar {
+            padding: 20px 24px;
+            border-top: 1px solid #ebeef5;
+            background: #fafafa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .actions-left {
+            display: flex;
+            gap: 12px;
+        }
+
+        .actions-right {
+            display: flex;
+            gap: 12px;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #909399;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #67c23a;
+        }
+
+        .preview-panel {
+            background: #f8f9fa;
+            border: 1px solid #ebeef5;
+            border-radius: 4px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .preview-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #303133;
+        }
+
+        .theme-preview {
+            display: flex;
+            gap: 12px;
+        }
+
+        .theme-item {
+            width: 80px;
+            height: 60px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .theme-item.active {
+            border-color: #409eff;
+        }
+
+        .theme-light {
+            background: linear-gradient(to bottom, #409eff 30%, #fff 30%);
+        }
+
+        .theme-dark {
+            background: linear-gradient(to bottom, #409eff 30%, #2c3e50 30%);
+        }
+
+        .notification-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .notification-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #409eff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .notification-desc {
+            font-size: 12px;
+            color: #909399;
+        }
+
+        @media (max-width: 768px) {
+            .settings-main {
+                flex-direction: column;
+            }
+
+            .settings-sidebar {
+                width: 100%;
+            }
+
+            .sidebar-menu {
+                display: flex;
+                overflow-x: auto;
+            }
+
+            .menu-item {
+                border-bottom: none;
+                border-right: 1px solid #f0f2f5;
+                min-width: 120px;
+            }
+
+            .menu-item:last-child {
+                border-right: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <!-- 页面头部 -->
+        <div class="settings-header">
+            <h1 class="settings-title">
+                <i class="fas fa-cog"></i>
+                系统设置
+            </h1>
+            <p class="settings-subtitle">管理系统配置、外观主题、通知偏好和安全选项</p>
+        </div>
+
+        <!-- 主要内容区域 -->
+        <div class="settings-main">
+            <!-- 左侧导航 -->
+            <div class="settings-sidebar">
+                <ul class="sidebar-menu">
+                    <li class="menu-item">
+                        <a href="#basic" class="menu-link active" data-section="basic">
+                            <i class="fas fa-info-circle menu-icon"></i>
+                            基本设置
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#appearance" class="menu-link" data-section="appearance">
+                            <i class="fas fa-palette menu-icon"></i>
+                            外观设置
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#notifications" class="menu-link" data-section="notifications">
+                            <i class="fas fa-bell menu-icon"></i>
+                            通知设置
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#security" class="menu-link" data-section="security">
+                            <i class="fas fa-shield-alt menu-icon"></i>
+                            安全设置
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#advanced" class="menu-link" data-section="advanced">
+                            <i class="fas fa-cogs menu-icon"></i>
+                            高级设置
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 右侧内容 -->
+            <div class="settings-content">
+                <!-- 基本设置 -->
+                <div id="basic-content" class="content-section">
+                    <div class="content-header">
+                        <h2 class="content-title">
+                            <i class="fas fa-info-circle"></i>
+                            基本设置
+                        </h2>
+                        <p class="content-description">配置系统的基本信息和运行参数</p>
+                    </div>
+                    <div class="content-body">
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-building"></i>
+                                系统信息
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">系统名称</div>
+                                    <div class="label-description">显示在浏览器标题和登录页面的系统名称</div>
+                                </div>
+                                <div class="setting-control">
+                                    <input type="text" class="input-field" value="Snow View Admin" placeholder="请输入系统名称">
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">系统描述</div>
+                                    <div class="label-description">系统的简短描述信息</div>
+                                </div>
+                                <div class="setting-control">
+                                    <input type="text" class="input-field" value="基于Vue3的后台管理系统" placeholder="请输入系统描述">
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">系统版本</div>
+                                    <div class="label-description">当前系统的版本号</div>
+                                </div>
+                                <div class="setting-control">
+                                    <input type="text" class="input-field" value="1.6.3" readonly>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">管理员邮箱</div>
+                                    <div class="label-description">系统管理员的联系邮箱</div>
+                                </div>
+                                <div class="setting-control">
+                                    <input type="email" class="input-field" value="admin@example.com" placeholder="请输入邮箱地址">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-server"></i>
+                                运行状态
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">系统状态</div>
+                                    <div class="label-description">控制系统是否对外提供服务</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">维护模式</div>
+                                    <div class="label-description">开启后只有管理员可以访问系统</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 外观设置 -->
+                <div id="appearance-content" class="content-section" style="display: none;">
+                    <div class="content-header">
+                        <h2 class="content-title">
+                            <i class="fas fa-palette"></i>
+                            外观设置
+                        </h2>
+                        <p class="content-description">自定义系统的视觉外观和主题风格</p>
+                    </div>
+                    <div class="content-body">
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-paint-brush"></i>
+                                主题配置
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">主题模式</div>
+                                    <div class="label-description">选择浅色或深色主题</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="theme-preview">
+                                        <div class="theme-item theme-light active" data-theme="light"></div>
+                                        <div class="theme-item theme-dark" data-theme="dark"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">主题色</div>
+                                    <div class="label-description">系统的主要颜色</div>
+                                </div>
+                                <div class="setting-control">
+                                    <div class="color-picker"></div>
+                                    <div class="preset-colors">
+                                        <div class="color-item" style="background: #409EFF;"></div>
+                                        <div class="color-item" style="background: #67C23A;"></div>
+                                        <div class="color-item" style="background: #E6A23C;"></div>
+                                        <div class="color-item" style="background: #F56C6C;"></div>
+                                        <div class="color-item" style="background: #909399;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-layout"></i>
+                                布局设置
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">布局模式</div>
+                                    <div class="label-description">选择系统的整体布局方式</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select-field">
+                                        <option value="classic">经典布局</option>
+                                        <option value="topLeft">顶部左侧</option>
+                                        <option value="top">顶部布局</option>
+                                        <option value="cutMenu">分割菜单</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">菜单折叠</div>
+                                    <div class="label-description">默认是否折叠侧边菜单</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">面包屑导航</div>
+                                    <div class="label-description">是否显示页面路径导航</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">标签页</div>
+                                    <div class="label-description">是否显示页面标签页</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 通知设置 -->
+                <div id="notifications-content" class="content-section" style="display: none;">
+                    <div class="content-header">
+                        <h2 class="content-title">
+                            <i class="fas fa-bell"></i>
+                            通知设置
+                        </h2>
+                        <p class="content-description">管理系统通知和消息推送偏好</p>
+                    </div>
+                    <div class="content-body">
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-envelope"></i>
+                                消息通知
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">桌面通知</div>
+                                    <div class="label-description">在桌面显示系统通知</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">邮件通知</div>
+                                    <div class="label-description">通过邮件接收重要通知</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">短信通知</div>
+                                    <div class="label-description">通过短信接收紧急通知</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">通知声音</div>
+                                    <div class="label-description">播放通知提示音</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-clock"></i>
+                                通知时间
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">免打扰时间</div>
+                                    <div class="label-description">设置不接收通知的时间段</div>
+                                </div>
+                                <div class="setting-control">
+                                    <input type="time" class="input-field" value="22:00" style="width: 90px; margin-right: 8px;">
+                                    <span>至</span>
+                                    <input type="time" class="input-field" value="08:00" style="width: 90px; margin-left: 8px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-list"></i>
+                                通知类型
+                            </h3>
+                            <div class="notification-item">
+                                <div class="notification-icon">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <div class="notification-title">用户活动</div>
+                                    <div class="notification-desc">新用户注册、登录异常等</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="notification-item">
+                                <div class="notification-icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <div class="notification-title">系统警告</div>
+                                    <div class="notification-desc">系统错误、性能警告等</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="notification-item">
+                                <div class="notification-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <div class="notification-title">数据报告</div>
+                                    <div class="notification-desc">定期数据统计报告</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 安全设置 -->
+                <div id="security-content" class="content-section" style="display: none;">
+                    <div class="content-header">
+                        <h2 class="content-title">
+                            <i class="fas fa-shield-alt"></i>
+                            安全设置
+                        </h2>
+                        <p class="content-description">配置系统安全策略和访问控制</p>
+                    </div>
+                    <div class="content-body">
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-key"></i>
+                                登录安全
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">双因子认证</div>
+                                    <div class="label-description">启用两步验证提高账户安全性</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">验证码</div>
+                                    <div class="label-description">登录时要求输入验证码</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">会话超时</div>
+                                    <div class="label-description">用户无操作自动退出时间（分钟）</div>
+                                </div>
+                                <div class="setting-control">
+                                    <input type="number" class="input-field" value="30" min="5" max="1440">
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">登录失败锁定</div>
+                                    <div class="label-description">多次登录失败后锁定账户</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">最大失败次数</div>
+                                    <div class="label-description">触发锁定的失败登录次数</div>
+                                </div>
+                                <div class="setting-control">
+                                    <input type="number" class="input-field" value="5" min="3" max="10">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-lock"></i>
+                                密码策略
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">密码复杂度</div>
+                                    <div class="label-description">设置密码强度要求</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select-field">
+                                        <option value="simple">简单（6位以上）</option>
+                                        <option value="medium" selected>中等（8位+数字字母）</option>
+                                        <option value="complex">复杂（8位+数字字母符号）</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">密码有效期</div>
+                                    <div class="label-description">密码过期时间（天）</div>
+                                </div>
+                                <div class="setting-control">
+                                    <input type="number" class="input-field" value="90" min="30" max="365">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-network-wired"></i>
+                                访问控制
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">IP白名单</div>
+                                    <div class="label-description">只允许特定IP地址访问</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 高级设置 -->
+                <div id="advanced-content" class="content-section" style="display: none;">
+                    <div class="content-header">
+                        <h2 class="content-title">
+                            <i class="fas fa-cogs"></i>
+                            高级设置
+                        </h2>
+                        <p class="content-description">系统高级配置和开发者选项</p>
+                    </div>
+                    <div class="content-body">
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-bug"></i>
+                                开发选项
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">调试模式</div>
+                                    <div class="label-description">启用详细的错误信息和日志</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">日志级别</div>
+                                    <div class="label-description">设置系统日志记录级别</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select-field">
+                                        <option value="error">ERROR</option>
+                                        <option value="warn">WARN</option>
+                                        <option value="info" selected>INFO</option>
+                                        <option value="debug">DEBUG</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-database"></i>
+                                数据管理
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">自动备份</div>
+                                    <div class="label-description">定期自动备份系统数据</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">备份频率</div>
+                                    <div class="label-description">设置数据备份的时间间隔</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select-field">
+                                        <option value="daily" selected>每日</option>
+                                        <option value="weekly">每周</option>
+                                        <option value="monthly">每月</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-tachometer-alt"></i>
+                                性能优化
+                            </h3>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">缓存策略</div>
+                                    <div class="label-description">选择系统缓存方式</div>
+                                </div>
+                                <div class="setting-control">
+                                    <select class="select-field">
+                                        <option value="memory" selected>内存缓存</option>
+                                        <option value="redis">Redis缓存</option>
+                                        <option value="file">文件缓存</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">API限流</div>
+                                    <div class="label-description">限制API请求频率</div>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="switch">
+                                        <input type="checkbox" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <div class="label-title">请求频率</div>
+                                    <div class="label-description">每分钟最大请求次数</div>
+                                </div>
+                                <div class="setting-control">
+                                    <input type="number" class="input-field" value="100" min="10" max="1000">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部操作栏 -->
+                <div class="actions-bar">
+                    <div class="actions-left">
+                        <div class="status-indicator">
+                            <span class="status-dot"></span>
+                            <span>上次保存：2024-01-15 14:30:25</span>
+                        </div>
+                    </div>
+                    <div class="actions-right">
+                        <button class="btn" onclick="resetSettings()">重置默认</button>
+                        <button class="btn" onclick="exportSettings()">导出配置</button>
+                        <button class="btn" onclick="importSettings()">导入配置</button>
+                        <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 导航切换功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuLinks = document.querySelectorAll('.menu-link');
+            const contentSections = document.querySelectorAll('.content-section');
+
+            menuLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // 移除所有活动状态
+                    menuLinks.forEach(l => l.classList.remove('active'));
+                    contentSections.forEach(s => s.style.display = 'none');
+                    
+                    // 添加当前活动状态
+                    this.classList.add('active');
+                    const section = this.getAttribute('data-section');
+                    document.getElementById(section + '-content').style.display = 'block';
+                });
+            });
+
+            // 主题切换
+            const themeItems = document.querySelectorAll('.theme-item');
+            themeItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    themeItems.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // 颜色选择
+            const colorItems = document.querySelectorAll('.color-item');
+            colorItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const color = this.style.backgroundColor;
+                    document.querySelector('.color-picker').style.backgroundColor = color;
+                });
+            });
+        });
+
+        // 功能函数
+        function saveSettings() {
+            // 模拟保存操作
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = '保存中...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+                alert('设置保存成功！');
+                
+                // 更新状态指示器
+                const statusIndicator = document.querySelector('.status-indicator span:last-child');
+                statusIndicator.textContent = '上次保存：' + new Date().toLocaleString('zh-CN');
+            }, 1500);
+        }
+
+        function resetSettings() {
+            if (confirm('确定要重置所有设置为默认值吗？此操作不可恢复。')) {
+                alert('设置已重置为默认值');
+                location.reload();
+            }
+        }
+
+        function exportSettings() {
+            // 模拟导出配置
+            const settings = {
+                basic: {
+                    systemName: 'Snow View Admin',
+                    systemDesc: '基于Vue3的后台管理系统',
+                    version: '1.6.3'
+                },
+                theme: {
+                    mode: 'light',
+                    primaryColor: '#409EFF',
+                    layout: 'classic'
+                }
+                // ... 其他设置
+            };
+            
+            const dataStr = JSON.stringify(settings, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'system-settings-' + new Date().toISOString().slice(0, 10) + '.json';
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            alert('配置文件已导出');
+        }
+
+        function importSettings() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const settings = JSON.parse(e.target.result);
+                            console.log('导入的设置:', settings);
+                            alert('配置文件导入成功！');
+                            // 这里可以应用导入的设置
+                        } catch (error) {
+                            alert('配置文件格式错误！');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+    </script>
+</body>
+</html>

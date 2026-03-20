@@ -14,6 +14,26 @@
 
 详细说明见 `web/docs/desc/lite_project/00_repo_baseline.md`。
 
+## 前端工作区
+
+前端代码现在位于 `apps/frontend/`，并由根目录的 `pnpm-workspace.yaml` 纳入 monorepo。
+
+在仓库根目录执行 `pnpm install` 后：
+
+- 默认 lite 口径：`pnpm --dir apps/frontend run dev`，后端用 `python -m web.lite_application`，默认对齐 `5001`
+- 历史 dev 口径：`pnpm --dir apps/frontend run dev:dev`，后端用 `SNOW_APP_STATUS=dev python web/application.py`，默认对齐 `15000`
+
+前端自己的说明见 `apps/frontend/README.md`。lite 下 `scheduler` 和 `/system/token` 相关页面会显式降级，不按“全量可用”口径说明。
+
+## 文档入口
+
+仓库级长期文档入口见 [docs/README.md](docs/README.md)。
+
+- `[docs/](docs)`：仓库级长期文档
+- `[web/docs/task/](web/docs/task)` 和 `[web/docs/review/](web/docs/review)`：执行文档
+- `[web/docs/desc/](web/docs/desc)`：阶段归档和结论文档
+- `[doc/](doc)`：`xalpha` 旧 Sphinx 文档区
+
 ## 技术栈与架构
 
 - 技术栈：`Flask 2.2`、`SQLAlchemy 1.4`、`APScheduler`、`Redis`、`Jinja2`、`Flask-RESTX 1.3.0`、`Dramatiq`
@@ -183,10 +203,12 @@ pytest -q
 - `web/models` | `web/services` | `web/routers`：数据模型、业务逻辑、API 路由
 - `web/scheduler` | `web/task`：定时任务与异步任务
 - `web/common`：工具、日志、配置与通用能力
+- `apps/frontend`：前端工作区
 - `web/migrations`：backend workspace 下的 Alembic 迁移目录
 - `web/scripts`：backend workspace 下的后端脚本入口
 - `web/dev_support`：本地开发辅助 SQL 和运维附属物
 - `web/docs`：业务与技术文档
+- `pnpm-workspace.yaml`：monorepo workspace 入口
 - `docker-compose.yml`：容器化启动配置
 
 ## 发布与版本
