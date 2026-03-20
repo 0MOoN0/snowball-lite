@@ -30,9 +30,10 @@ class GridPercentRouters(Resource):
         @@@
         """
         debug('获取网格的买入卖出距离百分比图形数据')
-        record_date = GridTradeAnalysisData.query \
-            .with_entities(func.max(GridTradeAnalysisData.record_date)).first()
-        if record_date is None or len(record_date) == 0:
+        record_date: datetime | None = db.session.query(
+            func.max(GridTradeAnalysisData.record_date)
+        ).scalar()
+        if record_date is None:
             # 不存在数据
             return R.ok()
         # 请求参数定义和解析，参数决定排序的内容，是按距离卖出价排序还是根据距离买入价排序
@@ -44,7 +45,6 @@ class GridPercentRouters(Resource):
             order_statement = GridTradeAnalysisData.down_bought_percent.desc()
         else:
             order_statement = GridTradeAnalysisData.up_sold_percent.desc()
-        record_date: datetime = record_date[0]
         res = db.session.query(GridTradeAnalysisData.record_date,
                                GridTradeAnalysisData.up_sold_percent,
                                GridTradeAnalysisData.down_bought_percent,
