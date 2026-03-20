@@ -1,6 +1,7 @@
 # backend_workspace_consolidation_design 任务状态
 
-- 源文档：`/Users/leon/projects/snowball-lite/web/docs/task/backend_workspace_consolidation_design.md`
+- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/task/backend_workspace_consolidation_design.md`
+- 归档文档：`/Users/leon/projects/snowball-lite/web/docs/desc/lite_project/03_backend_workspace_consolidation.md`
 - 当前状态：已完成
 - 当前轮次：round-01
 - 当前结论：已完成路径工具、目录收口、文档同步和定向回归；round-01 评审无 finding，报告已通过校验
@@ -59,8 +60,8 @@
 
 ## 下一步
 
-- 输出最终交付说明
 - 如需继续推进，可单独补外部脚本 / CI 对旧根目录路径的引用清理
+- 如需进入第二阶段，可再单独拆 monorepo 物理重排任务
 
 ## Review 结果
 

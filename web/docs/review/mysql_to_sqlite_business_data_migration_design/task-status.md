@@ -1,6 +1,7 @@
 # mysql_to_sqlite_business_data_migration_design 任务状态
 
-- 源文档：`/Users/leon/projects/snowball-lite/web/docs/task/mysql_to_sqlite_business_data_migration_design.md`
+- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/task/mysql_to_sqlite_business_data_migration_design.md`
+- 归档文档：`/Users/leon/projects/snowball-lite/web/docs/desc/lite_project/02_mysql_to_sqlite_business_migration.md`
 - 当前状态：已完成
 - 当前轮次：round-01
 - 已触达文件：
