@@ -45,19 +45,19 @@
   - `GET http://127.0.0.1:5502/system/settings/?page=1&size=5`
   - `GET http://127.0.0.1:5502/api/notification_list?page=1&pageSize=5`
   - `GET http://127.0.0.1:5502/api/notification/69`
-  - `sqlite3 /Users/leon/projects/snowball-lite/data/stg_lite.db 'select count(*) from tb_asset; select count(*) from system_settings;'`
+  - `sqlite3 /Users/leon/projects/snowball-lite/web/data/lite_runtime/stg_lite.db 'select count(*) from tb_asset; select count(*) from system_settings;'`
 - 最新判断：
   - 已补 `tb_amount_trade_analysis_data` 到 lite baseline，第一阶段业务表现在能在 schema 层对齐任务设计。
   - 迁移 service 已实现分表顺序、预检查、分批搬运、源库重试、迁后校验和 JSON 报告输出。
   - CLI 已支持 `--source-url`、`--target-sqlite`、`--tables`、`--dry-run`、`--resume-from-table`、`--truncate-target`、重试参数和 `--report-path`。
   - 已用真实 `stg` 远端业务库完成一轮分段 `dry-run` 验证：第一段在 240 秒窗口内完成前 6 张表，第二段从 `tb_asset_fund_lof` 续跑，在 224.6 秒内完成剩余 20 张表。
   - `stg` 远端链路确实会间歇性丢连接，但短超时 + 源操作重试 + 按表断点续跑可以把整轮预检查跑完。
-  - 真实 `stg` 正式迁移已完成，稳定交付物保留为 `/Users/leon/projects/snowball-lite/data/stg_lite.db`。
+  - 真实 `stg` 正式迁移已完成，稳定交付物保留为 `/Users/leon/projects/snowball-lite/web/data/lite_runtime/stg_lite.db`。
   - 正式迁移第一次在 `system_settings` 失败，原因不是网络，而是 bootstrap 生成的 `version:enum(id=1)` 和源库业务配置 `id=1..8` 发生主键冲突；修复后已从 `system_settings` 续跑成功。
   - 已用迁移后的 SQLite 启动 lite 服务，监听 `http://127.0.0.1:5501`，真实读接口 smoke 通过：资产列表、资产详情、记录详情、grid 分析结果、grid-type 分析结果均返回 `200` 且业务数据正常。
   - 已完成一轮后端接口验收：资产列表、资产详情、记录详情、记录列表、grid 分析结果、grid-type 分析结果、系统设置列表、通知列表、通知详情均返回 `200`，接口可直接读到迁移后的真实 `stg` 数据。
   - 迁移过程里产生的 `.tmp/mysql_to_sqlite` 临时库、重试报告和 SQLite 侧车文件只用于本地执行与排障，已在收口时清理；不作为仓库交付物保留。
-  - 最终稳定库 `data/stg_lite.db` 已核对关键计数：`tb_asset = 5460`，`system_settings = 9`。
+  - 最终稳定库 `web/data/lite_runtime/stg_lite.db` 已核对关键计数：`tb_asset = 5460`，`system_settings = 9`。
 - 当前阻塞：
   - 无阻塞。
 - 下一步：

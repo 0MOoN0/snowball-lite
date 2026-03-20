@@ -6,7 +6,7 @@
 - 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/task/mysql_to_sqlite_business_data_migration_design.md`
 - 对应状态：`/Users/leon/projects/snowball-lite/web/docs/review/mysql_to_sqlite_business_data_migration_design/task-status.md`
 - 对应评审：`/Users/leon/projects/snowball-lite/web/docs/review/mysql_to_sqlite_business_data_migration_design/round-01-review.md`
-- 稳定交付物：`/Users/leon/projects/snowball-lite/data/stg_lite.db`
+- 稳定交付物：`/Users/leon/projects/snowball-lite/web/data/lite_runtime/stg_lite.db`
 - 对应提交：`d78fbd1`
 
 ## 结论
@@ -45,7 +45,7 @@
 
 - 已完成真实 `stg` 源库的分段 `dry-run`
 - 已完成真实 `stg` -> SQLite 正式迁移
-- 迁移后的稳定库保留为 `data/stg_lite.db`
+- 迁移后的稳定库保留为 `web/data/lite_runtime/stg_lite.db`
 
 关键核对结果：
 

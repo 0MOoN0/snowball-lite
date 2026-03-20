@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from pathlib import Path
+from shutil import move
 import sqlite3
 
 try:
@@ -13,7 +14,12 @@ from alembic import command
 from alembic.config import Config
 
 from web.common.enum.version_enum import VersionKeyEnum
-from web.common.utils.backend_paths import get_migration_directory_by_env
+from web.common.utils.backend_paths import (
+    get_default_lite_db_path,
+    get_default_lite_xalpha_cache_dir,
+    get_legacy_repo_data_root,
+    get_migration_directory_by_env,
+)
 from web.common.utils.enum_utils import record_enum_version_to_sqlite
 
 
@@ -48,12 +54,75 @@ def get_lite_migration_directory() -> Path:
     return get_migration_directory_by_env("lite")
 
 
+def migrate_legacy_repo_data(
+    legacy_data_root: Path,
+    runtime_root: Path,
+    target_cache_dir: Path,
+    *,
+    move_sqlite_files: bool = True,
+    move_cache_dir: bool = True,
+) -> dict[str, list[tuple[Path, Path]]]:
+    moved: list[tuple[Path, Path]] = []
+    skipped: list[tuple[Path, Path]] = []
+
+    if not legacy_data_root.exists():
+        return {"moved": moved, "skipped": skipped}
+
+    if move_sqlite_files:
+        runtime_root.mkdir(parents=True, exist_ok=True)
+        for db_path in sorted(legacy_data_root.glob("*.db")):
+            related_paths = (
+                db_path,
+                db_path.with_name(f"{db_path.name}-shm"),
+                db_path.with_name(f"{db_path.name}-wal"),
+            )
+            for src in related_paths:
+                if not src.exists():
+                    continue
+                dst = runtime_root / src.name
+                if dst.exists():
+                    skipped.append((src, dst))
+                    continue
+                move(str(src), str(dst))
+                moved.append((src, dst))
+
+    if move_cache_dir:
+        src_cache_dir = legacy_data_root / "lite_xalpha_cache"
+        if src_cache_dir.exists():
+            if target_cache_dir.exists():
+                skipped.append((src_cache_dir, target_cache_dir))
+            else:
+                target_cache_dir.parent.mkdir(parents=True, exist_ok=True)
+                move(str(src_cache_dir), str(target_cache_dir))
+                moved.append((src_cache_dir, target_cache_dir))
+
+    return {"moved": moved, "skipped": skipped}
+
+
 def ensure_lite_runtime_paths(app) -> dict[str, Path]:
     db_path = Path(app.config["LITE_DB_PATH"]).resolve()
     cache_dir = Path(app.config["XALPHA_CACHE_DIR"]).resolve()
+    migration_result = migrate_legacy_repo_data(
+        legacy_data_root=get_legacy_repo_data_root(),
+        runtime_root=db_path.parent,
+        target_cache_dir=cache_dir,
+        move_sqlite_files=db_path == get_default_lite_db_path().resolve(),
+        move_cache_dir=cache_dir == get_default_lite_xalpha_cache_dir().resolve(),
+    )
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
     cache_dir.mkdir(parents=True, exist_ok=True)
+
+    if migration_result["moved"]:
+        app.logger.info(
+            "已将 %s 个 legacy lite 运行时产物从仓库根目录 data/ 迁移到 backend workspace",
+            len(migration_result["moved"]),
+        )
+    if migration_result["skipped"]:
+        app.logger.warning(
+            "检测到 %s 个 legacy lite 运行时产物未迁移，因为 backend workspace 目标已存在同名文件",
+            len(migration_result["skipped"]),
+        )
 
     return {
         "db_path": db_path,

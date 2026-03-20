@@ -132,6 +132,7 @@ uv run --no-dev python -m web.lite_application
 
 - `LITE_DB_PATH` 不传时，默认写到 `web/data/lite_runtime/snowball_lite.db`
 - `LITE_XALPHA_CACHE_DIR` 不传时，默认写到 `web/data/lite_runtime/lite_xalpha_cache`
+- 如果仓库根目录还留着旧的 `data/*.db` 或 `data/lite_xalpha_cache`，lite 启动时会自动迁到 `web/data/lite_runtime/`
 - Lite 模式只保证最小启动链路，不等同于完整生产能力
 - 如果后续需要验证 scheduler 或异步任务，请切回 `dev/stg/test`
 - 如果你本地创建了 `.vscode/launch.json`，可以直接使用 `Snowball Lite` 或 `Snowball Lite (Gunicorn)` 启动项

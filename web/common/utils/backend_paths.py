@@ -11,6 +11,10 @@ def get_repo_root() -> Path:
     return get_backend_root().parent
 
 
+def get_legacy_repo_data_root() -> Path:
+    return get_repo_root() / "data"
+
+
 def get_backend_data_root() -> Path:
     return get_backend_root() / "data"
 
