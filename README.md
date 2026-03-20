@@ -130,7 +130,8 @@ export LITE_DB_PATH=/absolute/path/to/snowball_lite.db
 uv run --no-dev python -m web.lite_application
 ```
 
-- `LITE_DB_PATH` 不传时，默认写到当前工作目录下的 `snowball_lite.db`
+- `LITE_DB_PATH` 不传时，默认写到 `web/data/lite_runtime/snowball_lite.db`
+- `LITE_XALPHA_CACHE_DIR` 不传时，默认写到 `web/data/lite_runtime/lite_xalpha_cache`
 - Lite 模式只保证最小启动链路，不等同于完整生产能力
 - 如果后续需要验证 scheduler 或异步任务，请切回 `dev/stg/test`
 - 如果你本地创建了 `.vscode/launch.json`，可以直接使用 `Snowball Lite` 或 `Snowball Lite (Gunicorn)` 启动项
@@ -139,17 +140,23 @@ uv run --no-dev python -m web.lite_application
 
 ## 数据库迁移
 
-按环境使用独立迁移目录：`migrations_snowball_dev/`、`migrations_snowball_stg/`、`migrations_snowball_test/`。
+后端工作区的迁移目录已经收口到 `web/migrations/`：
+
+- `web/migrations/dev/`
+- `web/migrations/stg/`
+- `web/migrations/test/`
+- `web/migrations/lite/`
 
 ```bash
 export SNOW_APP_STATUS=dev
-flask --app web.application:app db migrate -m "迁移描述" --directory migrations_snowball_dev
-flask --app web.application:app db upgrade --directory migrations_snowball_dev
-flask --app web.application:app db history --directory migrations_snowball_dev
-flask --app web.application:app db downgrade --directory migrations_snowball_dev
+flask --app web.application:app db migrate -m "迁移描述" --directory web/migrations/dev
+flask --app web.application:app db upgrade --directory web/migrations/dev
+flask --app web.application:app db history --directory web/migrations/dev
+flask --app web.application:app db downgrade --directory web/migrations/dev
 ```
 
-最佳实践：确保模型注册到 `db`，迁移前在测试环境验证，必要时通过 MCP 服务检查 `alembic_version`。
+Lite SQLite bootstrap 走 `bootstrap_lite_database(...)`，对应迁移基线在 `web/migrations/lite/`。
+MySQL 到 Lite SQLite 的迁移脚本现在位于 `web/scripts/mysql_to_sqlite_lite_migration.py`。
 
 ## API 文档与约定
 
@@ -162,7 +169,8 @@ flask --app web.application:app db downgrade --directory migrations_snowball_dev
 
 ## 测试
 
-测试位于 `web/webtest/`，使用 `pytest` 与标准 fixtures。回滚会话默认开启。
+后端和 lite 主线测试现在统一收口到 `web/webtest/`，其中 lite 回归位于 `web/webtest/lite/`。
+根目录 `tests/` 主要保留 `xalpha` 独立测试和 `web + xalpha` 混合测试。
 
 ```bash
 pytest -q
@@ -174,6 +182,9 @@ pytest -q
 - `web/models` | `web/services` | `web/routers`：数据模型、业务逻辑、API 路由
 - `web/scheduler` | `web/task`：定时任务与异步任务
 - `web/common`：工具、日志、配置与通用能力
+- `web/migrations`：backend workspace 下的 Alembic 迁移目录
+- `web/scripts`：backend workspace 下的后端脚本入口
+- `web/dev_support`：本地开发辅助 SQL 和运维附属物
 - `web/docs`：业务与技术文档
 - `docker-compose.yml`：容器化启动配置
 

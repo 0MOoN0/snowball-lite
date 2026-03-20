@@ -10,6 +10,7 @@ try:
 except ImportError:  # lite 路径不应该依赖 pymysql 包本身
     pymysql = None
 
+from web.common.utils.backend_paths import get_migration_directory_by_config_class
 from web.decorator.auto_registry import ensure_models_registered
 from web.models.base import db, migrate
 from web.weblogger import debug, warning, error, info
@@ -77,16 +78,7 @@ def get_migration_directory(config_class_name):
     Returns:
         str: 迁移目录路径
     """
-    migration_mapping = {
-        "DevConfig": "migrations_snowball_dev",
-        "StgConfig": "migrations_snowball_stg",
-        "ProdConfig": "migrations_snowball",
-        "LocalDevTest": "migrations_snowball_dev",  # 本地开发测试使用开发环境迁移
-        "TestingConfig": "migrations_snowball_test",
-        "LiteConfig": "migrations_snowball_lite",
-    }
-
-    directory = migration_mapping.get(config_class_name, "migrations_snowball_dev")
+    directory = str(get_migration_directory_by_config_class(config_class_name))
     info(f"配置类 {config_class_name} 映射到迁移目录: {directory}")
     return directory
 

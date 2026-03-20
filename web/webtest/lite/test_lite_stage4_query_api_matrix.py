@@ -36,9 +36,9 @@ FIXED_REGRESSION_COMMAND = (
     "pytest web/webtest/stage4/test_task01_asset_management_sqlite.py "
     "web/webtest/stage4/test_task02_record_management_sqlite.py "
     "web/webtest/stage4/test_task03_analysis_capability_sqlite.py -q && "
-    "pytest tests/test_lite_stage4_query_api_matrix.py "
+    "pytest web/webtest/lite/test_lite_stage4_query_api_matrix.py "
     "tests/test_lite_databox_stage4_coverage.py "
-    "tests/test_lite_smoke_validation_and_decision.py "
+    "web/webtest/lite/test_lite_smoke_validation_and_decision.py "
     "tests/test_xalpha_databox_compat.py -q"
 )
 
@@ -68,7 +68,7 @@ QUERY_API_COVERAGE_MATRIX = [
     {
         "capability": "系统查询入口 smoke",
         "entry": "GET /token_test/result",
-        "automation": "tests/test_lite_smoke_validation_and_decision.py，tests/test_lite_stage4_query_api_matrix.py",
+        "automation": "web/webtest/lite/test_lite_smoke_validation_and_decision.py，web/webtest/lite/test_lite_stage4_query_api_matrix.py",
         "manual": "否",
         "status": "已覆盖（smoke；不是业务查询主面）",
     },
@@ -343,7 +343,7 @@ def test_stage4_query_api_matrix_matches_current_scope():
     first_command, second_command = FIXED_REGRESSION_COMMAND.split(" && ", 1)
     assert first_command.startswith("pytest web/webtest/stage4/")
     assert "web/webtest/stage4" not in second_command
-    assert second_command.startswith("pytest tests/")
+    assert second_command.startswith("pytest web/webtest/lite/")
     assert "tests/test_xalpha_databox_compat.py" in FIXED_REGRESSION_COMMAND
 
 

@@ -12,6 +12,12 @@ Config ：基础配置，所有配置的基础类
 import os
 from urllib.parse import quote_plus
 
+from web.common.utils.backend_paths import (
+    get_default_lite_db_path,
+    get_default_lite_xalpha_cache_dir,
+    get_default_xalpha_cache_dir,
+)
+
 
 def build_sqlalchemy_jobstore_config(url):
     return {"backend": "sqlalchemy", "url": url}
@@ -55,7 +61,7 @@ class Config:
     ENABLE_XALPHA_SQL_CACHE = True
     XALPHA_CACHE_BACKEND = os.environ.get("XALPHA_CACHE_BACKEND", "sql").lower()
     XALPHA_CACHE_DIR = os.path.abspath(
-        os.environ.get("XALPHA_CACHE_DIR", os.path.join(os.getcwd(), "data", "xalpha_cache"))
+        os.environ.get("XALPHA_CACHE_DIR", str(get_default_xalpha_cache_dir()))
     )
     XALPHA_CACHE_SQLITE_PATH = os.environ.get("XALPHA_CACHE_SQLITE_PATH")
 
@@ -459,9 +465,7 @@ class LiteConfig(Config):
     SQLALCHEMY_RECORD_QUERIES = False
     SQLALCHEMY_ECHO = False
 
-    LITE_DB_PATH = os.path.abspath(
-        os.environ.get("LITE_DB_PATH", os.path.join(os.getcwd(), "snowball_lite.db"))
-    )
+    LITE_DB_PATH = os.path.abspath(os.environ.get("LITE_DB_PATH", str(get_default_lite_db_path())))
     LITE_DB_URI = f"sqlite:///{LITE_DB_PATH}"
 
     SQLALCHEMY_DATABASE_URI = LITE_DB_URI
@@ -487,7 +491,7 @@ class LiteConfig(Config):
     XALPHA_CACHE_DIR = os.path.abspath(
         os.environ.get(
             "LITE_XALPHA_CACHE_DIR",
-            os.path.join(os.getcwd(), "data", "lite_xalpha_cache"),
+            str(get_default_lite_xalpha_cache_dir()),
         )
     )
     XALPHA_CACHE_SQLITE_PATH = os.environ.get("LITE_XALPHA_CACHE_SQLITE_PATH")
@@ -519,7 +523,7 @@ def apply_runtime_overrides(app, config_name: str) -> None:
         return
 
     lite_db_path = os.path.abspath(
-        os.environ.get("LITE_DB_PATH", os.path.join(os.getcwd(), "snowball_lite.db"))
+        os.environ.get("LITE_DB_PATH", str(get_default_lite_db_path()))
     )
     lite_db_uri = f"sqlite:///{lite_db_path}"
 
@@ -538,7 +542,7 @@ def apply_runtime_overrides(app, config_name: str) -> None:
             "LITE_XALPHA_CACHE_DIR",
             app.config.get(
                 "XALPHA_CACHE_DIR",
-                os.path.join(os.getcwd(), "data", "lite_xalpha_cache"),
+                str(get_default_lite_xalpha_cache_dir()),
             ),
         )
     )

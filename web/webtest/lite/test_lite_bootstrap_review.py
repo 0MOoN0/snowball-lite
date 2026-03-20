@@ -8,10 +8,11 @@ from types import SimpleNamespace
 import pytest
 
 from web.common.cache import cache
+from web.common.utils.backend_paths import get_repo_root
 from web.scheduler import _resolve_job_id
 
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+REPO_ROOT = get_repo_root()
 pytestmark = pytest.mark.local
 
 

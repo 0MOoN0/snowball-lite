@@ -13,6 +13,7 @@ from alembic import command
 from alembic.config import Config
 
 from web.common.enum.version_enum import VersionKeyEnum
+from web.common.utils.backend_paths import get_migration_directory_by_env
 from web.common.utils.enum_utils import record_enum_version_to_sqlite
 
 
@@ -43,13 +44,8 @@ LITE_STAGE5_REQUIRED_TABLES = {
 # 阶段 3 的旧名字保留兼容，实际口径已经收口到阶段 5。
 LITE_STAGE3_REQUIRED_TABLES = LITE_STAGE5_REQUIRED_TABLES
 
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
-
-
 def get_lite_migration_directory() -> Path:
-    return _repo_root() / "migrations_snowball_lite"
+    return get_migration_directory_by_env("lite")
 
 
 def ensure_lite_runtime_paths(app) -> dict[str, Path]:
