@@ -41,6 +41,7 @@ def test_lite_bootstrap_stage5_builds_core_schema(tmp_path, monkeypatch):
             "tb_index_base",
             "tb_index_stock",
             "tb_index_alias",
+            "tb_amount_trade_analysis_data",
             "tb_category",
             "tb_asset_category",
         }.issubset(table_names)

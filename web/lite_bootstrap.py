@@ -24,6 +24,7 @@ LITE_STAGE5_REQUIRED_TABLES = {
     "tb_asset_fund_fee_rule",
     "tb_asset_holding_data",
     "tb_asset_category",
+    "tb_amount_trade_analysis_data",
     "tb_category",
     "tb_grid",
     "tb_grid_type",

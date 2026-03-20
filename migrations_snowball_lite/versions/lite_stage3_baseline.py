@@ -293,6 +293,12 @@ def upgrade():
     )
 
     op.create_table(
+        "tb_amount_trade_analysis_data",
+        sa.Column("id", sa.Integer(), sa.ForeignKey("tb_trade_analysis_data.id"), primary_key=True),
+        sa.Column("dividend_yield", sa.Integer(), nullable=True),
+    )
+
+    op.create_table(
         "tb_index_stock",
         sa.Column("id", sa.Integer(), sa.ForeignKey("tb_index_base.id"), primary_key=True),
         sa.Column("constituent_count", sa.Integer(), nullable=True),
@@ -362,6 +368,7 @@ def downgrade():
     op.drop_table("tb_index_base")
     op.drop_table("tb_asset_category")
     op.drop_table("tb_category")
+    op.drop_table("tb_amount_trade_analysis_data")
     op.drop_table("tb_grid_trade_analysis_data")
     op.drop_table("tb_trade_analysis_data")
     op.drop_table("tb_grid_type_record")
