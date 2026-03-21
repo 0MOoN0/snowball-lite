@@ -225,8 +225,22 @@ MySQL 到 Lite SQLite 的迁移脚本现在位于 `apps/backend/web/scripts/mysq
 后端和 lite 主线测试现在统一收口到 `apps/backend/web/webtest/`，其中 lite 回归位于 `apps/backend/web/webtest/lite/`。
 根目录 `tests/` 主要保留 `xalpha` 独立测试和 `web + xalpha` 混合测试。
 
+当前测试口径分两层：
+
+- `apps/backend/web/webtest/lite/` 和根目录 `tests/` 默认走 pytest 临时 SQLite 文件，不连接长期 lite 业务库
+- 历史 `apps/backend/web/webtest/` 里仍有依赖 MySQL 测试库的老用例，当前应按文件范围单独执行，不建议直接全量 `pytest -q`
+
+日常做 lite 回归时，先按范围拆开跑：
+
 ```bash
-pytest -q
+pytest apps/backend/web/webtest/lite -m "not manual" -q
+pytest tests -m "not manual" -q
+```
+
+如果需要运行历史 MySQL 兼容层，显式执行：
+
+```bash
+pytest apps/backend/web/webtest -m mysql_integration -q
 ```
 
 ## 目录结构（关键模块）

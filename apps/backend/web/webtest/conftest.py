@@ -12,15 +12,42 @@ from web.lite_bootstrap import bootstrap_lite_database
 from web.models import db
 from web.models.setting.system_settings import Setting
 from web.webtest.lite_runtime_guard import ensure_test_lite_db_path_isolated
+from web.webtest.mysql_test_guard import (
+    MYSQL_INTEGRATION_MARK,
+    should_run_mysql_integration,
+    uses_mysql_test_fixtures,
+    validate_mysql_test_database_names,
+)
 
 """
 pytest配置文件，定义基础的fixtures
 """
 
 
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(config, items):
+    mysql_items = []
+    for item in items:
+        if uses_mysql_test_fixtures(item.fixturenames):
+            item.add_marker(getattr(pytest.mark, MYSQL_INTEGRATION_MARK))
+            mysql_items.append(item)
+
+    if not mysql_items or should_run_mysql_integration(config.option.markexpr):
+        return
+
+    remaining_items = [item for item in items if item not in mysql_items]
+    config.hook.pytest_deselected(items=mysql_items)
+    items[:] = remaining_items
+
+
 @pytest.fixture(scope="session", params=['test'])
 def app(request):
     # 日志输出参数
+    if request.param == "test":
+        validate_mysql_test_database_names(
+            os.environ.get("TEST_DB_TESTDB", "snowball_test"),
+            os.environ.get("TEST_DB_DATABASE", "snowball_data_test"),
+        )
     app = create_app(config_name=request.param)
     app.logger.debug('request.param : ' + request.param)
     with app.app_context():
@@ -206,6 +233,8 @@ def setup_test_database():
     test_db_name = os.environ.get("TEST_DB_TESTDB", "snowball_test")
     data_db_name = os.environ.get("TEST_DB_DATABASE", "snowball_data_test")
     # profiler_db_name = os.environ.get("TEST_DB_PROFILER", "snowball_profiler_test")  # 移除profiler数据库
+
+    validate_mysql_test_database_names(test_db_name, data_db_name)
     
     # 连接到MySQL服务器（不指定数据库）
     root_engine = create_engine(

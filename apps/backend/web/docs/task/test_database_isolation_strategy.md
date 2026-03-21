@@ -1,10 +1,38 @@
 # 测试库隔离方案任务设计
 
+- [x] `tests/` 已统一走 lite 临时 SQLite 测试库
+- [x] `web/webtest` 的 lite fixtures 已统一走临时 SQLite，并接入路径保护
+- [x] 历史 MySQL fixtures 增加“禁止连接业务库”的硬保护
+- [x] 历史 MySQL 测试加 `mysql_integration` 标记并从默认 pytest 中排除
+- [x] README 默认测试命令改成 SQLite 默认层优先
+- [ ] CI 测试 job 按 SQLite 默认层 / MySQL 兼容层拆分
+
 ## 任务状态
 
-- 状态：待开始
+- 状态：核心规则已完成
 - 选定方案：方案 4，分层策略
 - 目标：业务库和测试库彻底分开，默认跑测试不触碰业务库
+- 已完成范围：lite / SQLite 测试隔离、历史 MySQL 测试收口、README 默认执行口径收口
+- 剩余范围：CI job 拆分、按价值继续把老 MySQL `webtest` 迁到 SQLite
+
+## 0. 先说当前结论
+
+这份任务现在已经不是“SQLite 完成、MySQL 未完成”，而是“核心隔离规则已落地，剩下的是 CI 和逐步迁移”。
+
+当前可以明确分成两部分：
+
+1. 已完成
+   - `tests/` 已复用 lite runtime fixtures，使用 pytest 临时目录下的 SQLite 文件
+   - `web/webtest` 的 lite fixtures 已改成临时 SQLite
+   - pytest 下的 lite 启动入口已接入 `LITE_DB_PATH` 隔离保护，不能指向长期业务库
+   - 历史 MySQL fixtures 已接入测试库名保护，误配成业务库名时直接失败
+   - 依赖 MySQL fixtures 的 `webtest` 现在会自动打上 `mysql_integration` 标记
+   - 默认 pytest 收集会把这批 MySQL 测试排除；显式 `pytest -m mysql_integration` 时才会收集
+   - 这部分落地情况已经归档到 `apps/backend/web/docs/desc/lite_project/05_lite_database_layering_strategy.md`
+
+2. 未完成
+   - 仓库还没有把 SQLite 默认层 / MySQL 兼容层拆成单独 CI job
+   - 历史 `web/webtest` 仍有不少老用例继续依赖 MySQL 测试库，还没有逐步迁完
 
 ## 1. 任务目标
 
@@ -24,12 +52,13 @@
 1. `tests/`
    - 走 lite
    - 使用 pytest 临时目录下的 SQLite 文件
-   - 默认不会碰业务库
+   - 已接入路径校验，默认不会碰长期 lite 业务库
 
 2. `web/webtest` 的 lite fixture
    - `lite_webtest_app`
    - `lite_rollback_session`
    - 也是临时 SQLite
+   - 已接入路径校验
 
 3. `web/webtest` 的历史 fixture
    - `app`
@@ -38,7 +67,12 @@
    - `test_db_session`
    - 仍然使用 MySQL 测试库
 
-当前问题不是“完全没隔离”，而是隔离策略没有统一成项目规则，老测试和新测试走不同入口，而且还缺少硬保护。
+当前问题不是“完全没隔离”，而是只完成了 lite / SQLite 这条线，历史 MySQL 这条线还没有统一成项目规则。
+
+当前主要缺口是：
+
+1. CI 还没有按 SQLite 默认层 / MySQL 兼容层拆 job
+2. 历史 `web/webtest` 还没有按功能价值逐步迁到 SQLite
 
 ## 3. 选定方案
 
@@ -71,14 +105,16 @@
 
 ### 5.1 夹具收口
 
-要把当前测试夹具收成两套明确入口：
+当前测试夹具已经基本分成两套入口，但项目规则还没完全收口：
 
 - SQLite 入口
   - `tests/conftest.py`
   - `web/webtest/conftest.py` 中的 lite fixtures
+  - 当前状态：已落地
 
 - MySQL 入口
   - `web/webtest/conftest.py` 中的历史 test fixtures
+  - 当前状态：已补环境保护，且会自动加 `mysql_integration` 标记
 
 后续新增测试默认只能使用 SQLite 入口。
 
@@ -90,9 +126,16 @@
 - 使用 MySQL 测试库的测试必须显式打标
 - 不带标记的默认测试不能走 MySQL fixture
 
+当前状态：
+- 已落地
+- 当前通过 MySQL fixture 自动加标，不再依赖逐文件手写标记
+
 ### 5.3 环境保护
 
-这是第一优先级，必须先做。
+这部分要分开看：
+
+- `LITE_DB_PATH` 的 pytest 隔离保护：已完成
+- MySQL 测试库名保护：已完成
 
 保护规则：
 
@@ -107,37 +150,42 @@
 MySQL 层单独执行，例如 `pytest -m mysql_integration`。
 后续 CI 也拆成两个 job：默认 job 跑 SQLite，可选 job 跑 MySQL 兼容层。
 
+当前状态：
+- README 默认口径已收口
+- 默认 pytest 现在不会收集依赖 MySQL fixtures 的 `webtest`
+- CI job 还没有单独拆层
+
 ## 6. 实施步骤
 
-建议按下面顺序做：
+后续建议只做剩余缺口，不重复做已完成的 SQLite / MySQL 隔离规则：
 
-1. 先补环境保护
-2. 再新增 `mysql_integration` 标记
-3. 再把历史 MySQL 测试显式打标
-4. 再把能迁到 SQLite 的 `web/webtest` 逐步改用 lite fixtures
-5. 最后调整默认 pytest / CI 命令
+1. 先把 CI 拆成 SQLite 默认层 / MySQL 兼容层
+2. 再按功能价值，逐步把能迁到 SQLite 的老 `web/webtest` 迁走
+3. 最后收缩 MySQL 兼容层的范围，只保留必须验证方言行为的测试
 
 ## 7. 验收标准
 
-完成后至少满足这些条件：
+核心规则完成后至少满足这些条件：
 
 - 默认跑测试不会连接业务库
 - 默认测试命令只使用临时 SQLite
-- 所有 MySQL 测试都带 `mysql_integration` 标记
+- 所有依赖 MySQL fixtures 的测试都会带 `mysql_integration` 标记
 - MySQL 测试只能连接专用测试库
 - 故意把测试库变量配成业务库名时，fixture 会直接失败
 
 ## 8. 风险点
 
 - 一部分老 `web/webtest` 仍然依赖 MySQL 行为，不能一步全迁
-- 如果只改文档不加硬保护，仍然可能误连业务库
+- 如果只更新文档，不补 MySQL 硬保护，仍然可能误连业务库
 - 如果不先做标记收口，后面很难知道哪些测试还依赖 MySQL
+- 如果 README 继续保留“直接 `pytest -q`”的泛化说法，容易误导日常使用
+- 如果后续只停在“排除默认运行”，但一直不迁老 `webtest`，MySQL 兼容层会长期偏大
 
 ## 9. 推荐落地顺序
 
-推荐先做两件事：
+当前推荐顺序：
 
-1. 在测试夹具里加“禁止连接业务库”的硬保护
-2. 给 MySQL 测试加显式标记并拆执行命令
+1. 先把 CI 按 SQLite 默认层 / MySQL 兼容层拆开
+2. 再逐步把高价值、低方言依赖的老 `webtest` 迁到 SQLite
 
-这两步完成后，即使还没完全迁到 SQLite，业务库和测试库也已经能真正分开。
+核心规则已经完成；后面的重点不再是“防误连”，而是“继续缩小 MySQL 兼容层”。
