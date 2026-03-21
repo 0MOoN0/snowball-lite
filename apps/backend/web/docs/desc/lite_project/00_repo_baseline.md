@@ -1,5 +1,10 @@
 # Snowball Lite 仓库基线
 
+> 归档说明
+>
+> 当前长期版本见 [docs/architecture/repo-baseline.md](../../../../../../docs/architecture/repo-baseline.md)。
+> 这份文档保留当时的阶段基线记录，后续正式维护以根目录 `docs/` 下的仓库基线为准。
+
 ## 当前定位
 
 `snowball-lite` 是从原始 `snowball` 仓库拆出的轻量版项目基线，目标是继续沿着 SQLite、本地运行和弱依赖方向推进。

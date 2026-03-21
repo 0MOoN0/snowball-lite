@@ -21,14 +21,21 @@
 ## 当前入口
 
 - 后端长期说明入口：`[docs/backend/](backend)`
+- 后端系统总览：`[docs/backend/system-overview.md](backend/system-overview.md)`
+- 后端运行配置：`[docs/backend/runtime-config.md](backend/runtime-config.md)`
+- 后端接口和服务约定：`[docs/backend/api-and-service-conventions.md](backend/api-and-service-conventions.md)`
+- 后端 lite/MySQL 对照：`[docs/backend/lite-mysql-matrix.md](backend/lite-mysql-matrix.md)`
 - 前端长期说明入口：`[docs/frontend/](frontend)`
 - 架构入口：`[docs/architecture/](architecture)`
+- 仓库基线：`[docs/architecture/repo-baseline.md](architecture/repo-baseline.md)`
+- lite 边界：`[docs/architecture/lite-boundary.md](architecture/lite-boundary.md)`
 - `xalpha` 入口：`[docs/xalpha/](xalpha)`
 
-## 现有文档指针
+## 归档与历史指针
 
-- 后端系统说明：`[apps/backend/web/docs/系统说明.md](../apps/backend/web/docs/系统说明.md)`
-- 后端环境说明：`[apps/backend/web/docs/环境变量配置指南.md](../apps/backend/web/docs/环境变量配置指南.md)`
+- 后端旧系统说明：`[apps/backend/web/docs/系统说明.md](../apps/backend/web/docs/系统说明.md)`
+- 后端旧环境说明：`[apps/backend/web/docs/环境变量配置指南.md](../apps/backend/web/docs/环境变量配置指南.md)`
+- lite 仓库旧 baseline：`[apps/backend/web/docs/desc/lite_project/00_repo_baseline.md](../apps/backend/web/docs/desc/lite_project/00_repo_baseline.md)`
 - lite 改造方案：`[apps/backend/web/docs/轻量版分支改造方案.md](../apps/backend/web/docs/轻量版分支改造方案.md)`
 - 前端工作区说明：`[apps/frontend/README.md](../apps/frontend/README.md)`
 - `xalpha` 文档入口：`[doc/source/index.rst](../doc/source/index.rst)`

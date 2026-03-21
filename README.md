@@ -1,6 +1,6 @@
 # Snowball Lite Web应用
 
-从 `snowball` 拆出的轻量版后台服务基线。当前以 SQLite 单机链路和最小依赖运行能力为主，保留阶段一验证结果，并继续推进阶段二收敛工作。
+从 `snowball` 拆出的轻量版后台服务基线。当前以 SQLite 单机链路和最小依赖运行能力为主，lite 阶段 1 到阶段 3 已完成，阶段 4 还没开始。
 
 **关键词**：Flask、SQLAlchemy、SQLite、Flask-RESTX、Jinja2、Akshare、xalpha
 
@@ -10,9 +10,9 @@
 - 来源提交：`8d803c37fd1d689aca862348814b34addc892967`
 - 当前版本：`0.1.0`
 - 默认分支：`main`
-- 当前目标：继续完成 lite 项目的阶段二验证和收敛
+- 当前目标：继续沿 lite 主线做收敛，但不把当前结果误写成“全仓库 SQLite 迁移完成”
 
-详细说明见 `apps/backend/web/docs/desc/lite_project/00_repo_baseline.md`。
+详细说明见 `docs/architecture/repo-baseline.md`。
 
 ## 前端工作区
 
@@ -42,6 +42,12 @@
 仓库级长期文档入口见 [docs/README.md](docs/README.md)。
 
 - `[docs/](docs)`：仓库级长期文档
+- `[docs/backend/system-overview.md](docs/backend/system-overview.md)`：后端系统总览
+- `[docs/backend/runtime-config.md](docs/backend/runtime-config.md)`：后端运行配置
+- `[docs/backend/api-and-service-conventions.md](docs/backend/api-and-service-conventions.md)`：接口和服务写法
+- `[docs/backend/lite-mysql-matrix.md](docs/backend/lite-mysql-matrix.md)`：lite 与 MySQL 对照
+- `[docs/architecture/repo-baseline.md](docs/architecture/repo-baseline.md)`：仓库基线
+- `[docs/architecture/lite-boundary.md](docs/architecture/lite-boundary.md)`：lite 边界
 - `[apps/backend/web/docs/task/](apps/backend/web/docs/task)` 和 `[apps/backend/web/docs/review/](apps/backend/web/docs/review)`：执行文档
 - `[apps/backend/web/docs/desc/](apps/backend/web/docs/desc)`：阶段归档和结论文档
 - `[doc/](doc)`：`xalpha` 旧 Sphinx 文档区
@@ -183,7 +189,7 @@ uv run --no-dev python -m web.lite_application
 - 如果后续需要完整验证 scheduler 或异步任务，仍优先用 `dev/stg/test`
 - 如果你本地创建了 `.vscode/launch.json`，可以直接使用 `Snowball Lite` 或 `Snowball Lite (Gunicorn)` 启动项
 
-更多配置说明见 `apps/backend/web/docs/环境变量配置指南.md` 与 `apps/backend/web/settings.py` 注释。
+更多配置说明见 `docs/backend/runtime-config.md` 与 `apps/backend/web/settings.py` 注释。
 
 ## 数据库迁移
 
@@ -212,7 +218,7 @@ MySQL 到 Lite SQLite 的迁移脚本现在位于 `apps/backend/web/scripts/mysq
 - 响应格式：统一使用 `R.ok(...)` / `R.fail(...)` 包装
 - 文档规范：详细写在接口 `docstring`，不直接返回 HTTP 状态码说明
 
-更多规范见 `apps/backend/web/docs/技术总结.md` 与 `apps/backend/web/docs/系统说明.md`。
+更多规范见 `docs/backend/system-overview.md` 与 `apps/backend/web/docs/技术总结.md`。
 
 ## 测试
 
@@ -233,7 +239,7 @@ pytest -q
 - `apps/backend/web/migrations`：backend workspace 下的 Alembic 迁移目录
 - `apps/backend/web/scripts`：backend workspace 下的后端脚本入口
 - `apps/backend/web/dev_support`：本地开发辅助 SQL 和运维附属物
-- `apps/backend/web/docs`：业务与技术文档
+- `apps/backend/web/docs`：后端执行文档、任务设计和阶段归档
 - `pnpm-workspace.yaml`：monorepo workspace 入口
 - `docker-compose.yml`：容器化启动配置
 

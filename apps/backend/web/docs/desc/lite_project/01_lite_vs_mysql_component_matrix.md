@@ -1,5 +1,10 @@
 # Lite 与 MySQL 运行组件对照
 
+> 归档说明
+>
+> 当前长期版本见 [docs/backend/lite-mysql-matrix.md](../../../../../../docs/backend/lite-mysql-matrix.md)。
+> 这份文档保留阶段对照记录，后续正式维护以根目录 `docs/` 下的长期文档为准。
+
 ## 结论先看
 
 - lite 主线不是只把数据库从 MySQL 换成 SQLite。
