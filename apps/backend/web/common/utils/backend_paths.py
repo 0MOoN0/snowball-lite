@@ -34,6 +34,35 @@ def get_default_lite_db_path() -> Path:
     return get_lite_runtime_root() / "snowball_lite.db"
 
 
+def get_default_lite_dev_db_path() -> Path:
+    return get_lite_runtime_root() / "snowball_lite_dev.db"
+
+
+def get_long_lived_lite_db_paths() -> set[Path]:
+    return {
+        get_default_lite_db_path().resolve(),
+        get_default_lite_dev_db_path().resolve(),
+    }
+
+
+def ensure_test_lite_db_path_isolated(db_path: str | Path) -> Path:
+    resolved_path = Path(db_path).expanduser().resolve()
+
+    if resolved_path in get_long_lived_lite_db_paths():
+        raise ValueError("pytest 测试库不能指向长期 lite 业务库")
+
+    if resolved_path.name.startswith("pytest-"):
+        return resolved_path
+
+    if any(
+        part.startswith("pytest-") or part.startswith("pytest-of-")
+        for part in resolved_path.parts[:-1]
+    ):
+        return resolved_path
+
+    raise ValueError("pytest 测试库必须使用 pytest 临时路径或 pytest- 前缀文件名")
+
+
 def get_default_lite_xalpha_cache_dir() -> Path:
     return get_lite_runtime_root() / "lite_xalpha_cache"
 

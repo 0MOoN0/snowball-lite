@@ -69,7 +69,7 @@ def init_app(app):
     app.register_blueprint(user_bp)
     app.register_blueprint(asset_relations_bp)
     # scheduler
-    if app.config.get("ENABLE_SCHEDULER", True):
+    if app.config.get("SCHEDULER_AVAILABLE", False):
         from web.routers.scheduler.scheduler_job_list_routers import (
             scheduler_job_list_bp,
         )
@@ -86,7 +86,7 @@ def init_app(app):
         app.register_blueprint(scheduler_job_list_bp)
         app.register_blueprint(scheduler_job_log_bp)
     else:
-        app.logger.info("由于调度器未启用，跳过 scheduler 路由注册")
+        app.logger.info("由于调度器未启用或初始化失败，跳过 scheduler 路由注册")
     # system
     app.register_blueprint(system_bp)
     # app.register_blueprint(system_settings_bp)

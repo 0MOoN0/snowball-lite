@@ -57,6 +57,7 @@ def create_app(config_name="dev"):
     app = Flask(__name__)
     app.config.from_object(settings.config[config_name])
     settings.apply_runtime_overrides(app, config_name)
+    settings.validate_lite_test_db_path(app, config_name)
 
     # 保存配置名称到app.config中，供后续使用
     app.config["_config_name"] = config_name
@@ -93,8 +94,13 @@ def create_app(config_name="dev"):
                 app.logger.info("根据配置禁用持久化 JobStore，调度器将使用内存模式")
             app.logger.info("正在初始化调度器...")
             scheduler_module = _import_web_module("scheduler")
-            scheduler_module.init_app(app)
-            app.config["SCHEDULER_AVAILABLE"] = True
+            scheduler_started = scheduler_module.init_app(app)
+            if not scheduler_started:
+                if config_name == "lite":
+                    raise Exception("调度器初始化失败，应用无法正常工作，终止启动")
+                app.logger.warning("调度器初始化失败，跳过 scheduler 可用标记和路由注册")
+            else:
+                app.config["SCHEDULER_AVAILABLE"] = True
         else:
             app.logger.info("根据配置跳过调度器初始化")
 

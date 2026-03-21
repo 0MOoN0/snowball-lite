@@ -10,6 +10,7 @@ from web.models import get_migration_directory
 from web.common.utils.backend_paths import (
     get_backend_root,
     get_default_lite_db_path,
+    get_default_lite_dev_db_path,
     get_default_lite_xalpha_cache_dir,
     get_migration_directory_by_config_class,
 )
@@ -29,6 +30,12 @@ def test_lite_runtime_defaults_do_not_follow_cwd(tmp_path, monkeypatch):
     assert Path(app.config["XALPHA_CACHE_DIR"]) == get_default_lite_xalpha_cache_dir()
     assert Path(app.config["LITE_DB_PATH"]).is_relative_to(get_backend_root())
     assert Path(app.config["XALPHA_CACHE_DIR"]).is_relative_to(get_backend_root())
+
+
+def test_lite_runtime_recommends_separate_stable_and_dev_databases():
+    assert get_default_lite_db_path().name == "snowball_lite.db"
+    assert get_default_lite_dev_db_path().name == "snowball_lite_dev.db"
+    assert get_default_lite_db_path().parent == get_default_lite_dev_db_path().parent
 
 
 def test_lite_and_dev_migration_directories_resolve_under_web_workspace():

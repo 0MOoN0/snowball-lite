@@ -11,6 +11,7 @@ from web import create_app
 from web.lite_bootstrap import bootstrap_lite_database
 from web.models import db
 from web.models.setting.system_settings import Setting
+from web.webtest.lite_runtime_guard import ensure_test_lite_db_path_isolated
 
 """
 pytest配置文件，定义基础的fixtures
@@ -89,8 +90,10 @@ def rollback_session(app):
 
 @contextmanager
 def _temporary_lite_runtime_env(root: Path):
-    db_path = root / "snowball_lite_stage3.db"
-    cache_dir = root / "lite_xalpha_cache"
+    db_path = ensure_test_lite_db_path_isolated(
+        root / "pytest-snowball-lite-stage3.db"
+    )
+    cache_dir = root / "pytest-lite_xalpha_cache"
     old_env = {
         "LITE_DB_PATH": os.environ.get("LITE_DB_PATH"),
         "LITE_XALPHA_CACHE_DIR": os.environ.get("LITE_XALPHA_CACHE_DIR"),
@@ -117,7 +120,7 @@ def _temporary_lite_runtime_env(root: Path):
 
 @pytest.fixture(scope="session")
 def lite_webtest_runtime(tmp_path_factory):
-    root = Path(tmp_path_factory.mktemp("lite-webtest-stage3"))
+    root = Path(tmp_path_factory.mktemp("pytest-lite-webtest-stage3"))
     with _temporary_lite_runtime_env(root) as runtime:
         yield runtime
 

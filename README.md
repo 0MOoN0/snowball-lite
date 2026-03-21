@@ -170,10 +170,17 @@ uv run --no-dev python -m web.lite_application
 ```
 
 - `LITE_DB_PATH` 不传时，默认写到 `web/data/lite_runtime/snowball_lite.db`
+- `web/data/lite_runtime/snowball_lite.db` 是 lite 的 stable/prod 长期业务库默认路径
+- `web/data/lite_runtime/snowball_lite_dev.db` 是 lite 的 dev 长期开发库推荐路径
+- `test` 口径默认使用 pytest 临时路径里的 SQLite 文件，文件名建议带 `pytest-` 前缀
+- `stg` 不建议长期常驻；只在发版前演练或数据检查时，从 stable 复制快照，例如 `web/data/lite_runtime/snowball_lite_stg_YYYYMMDD.db`
 - `LITE_XALPHA_CACHE_DIR` 不传时，默认写到 `web/data/lite_runtime/lite_xalpha_cache`
 - 如果仓库根目录还留着旧的 `data/*.db` 或 `data/lite_xalpha_cache`，lite 启动时会自动迁到 `web/data/lite_runtime/`
 - Lite 模式只保证最小启动链路，不等同于完整生产能力
-- 如果后续需要验证 scheduler 或异步任务，请切回 `dev/stg/test`
+- lite 默认关闭 scheduler；如果只是临时验证，可设置 `LITE_ENABLE_SCHEDULER=true`
+- 如果需要持久化 jobstore，再加 `LITE_ENABLE_PERSISTENT_JOBSTORE=true` 和 `LITE_SCHEDULER_DB_PATH=/absolute/path/to/lite_scheduler.db`
+- `LITE_SCHEDULER_DB_PATH` 不能和 `LITE_DB_PATH` 指向同一个 SQLite 文件
+- 如果后续需要完整验证 scheduler 或异步任务，仍优先用 `dev/stg/test`
 - 如果你本地创建了 `.vscode/launch.json`，可以直接使用 `Snowball Lite` 或 `Snowball Lite (Gunicorn)` 启动项
 
 更多配置说明见 `web/docs/环境变量配置指南.md` 与 `web/settings.py` 注释。

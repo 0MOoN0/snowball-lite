@@ -10,9 +10,12 @@ Config ：基础配置，所有配置的基础类
 """
 
 import os
+import sys
+from pathlib import Path
 from urllib.parse import quote_plus
 
 from web.common.utils.backend_paths import (
+    ensure_test_lite_db_path_isolated,
     get_default_lite_db_path,
     get_default_lite_xalpha_cache_dir,
     get_default_xalpha_cache_dir,
@@ -21,6 +24,20 @@ from web.common.utils.backend_paths import (
 
 def build_sqlalchemy_jobstore_config(url):
     return {"backend": "sqlalchemy", "url": url}
+
+
+def _parse_env_bool(value: str | None, default: bool) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _normalize_path(path: str) -> str:
+    return str(Path(path).expanduser().resolve(strict=False))
+
+
+def build_sqlite_jobstore_config(path: str):
+    return build_sqlalchemy_jobstore_config(f"sqlite:///{path}")
 
 
 class Config:
@@ -484,6 +501,7 @@ class LiteConfig(Config):
     ENABLE_TASK_QUEUE = False
     ENABLE_SCHEDULER = False
     ENABLE_PERSISTENT_JOBSTORE = False
+    LITE_SCHEDULER_DB_PATH = None
     ENABLE_PROFILER = False
     ENABLE_XALPHA_SQL_CACHE = False
     ENABLE_ENGINE_LOG = False
@@ -518,11 +536,21 @@ config = {
 }
 
 
+def validate_lite_test_db_path(app, config_name: str) -> None:
+    if config_name != "lite":
+        return
+
+    if "pytest" not in sys.modules and os.environ.get("PYTEST_CURRENT_TEST") is None:
+        return
+
+    ensure_test_lite_db_path_isolated(app.config["LITE_DB_PATH"])
+
+
 def apply_runtime_overrides(app, config_name: str) -> None:
     if config_name != "lite":
         return
 
-    lite_db_path = os.path.abspath(
+    lite_db_path = _normalize_path(
         os.environ.get("LITE_DB_PATH", str(get_default_lite_db_path()))
     )
     lite_db_uri = f"sqlite:///{lite_db_path}"
@@ -549,3 +577,36 @@ def apply_runtime_overrides(app, config_name: str) -> None:
     app.config["XALPHA_CACHE_SQLITE_PATH"] = os.environ.get(
         "LITE_XALPHA_CACHE_SQLITE_PATH"
     )
+    lite_scheduler_enabled = _parse_env_bool(
+        os.environ.get("LITE_ENABLE_SCHEDULER"),
+        app.config.get("ENABLE_SCHEDULER", False),
+    )
+    lite_persistent_jobstore = _parse_env_bool(
+        os.environ.get("LITE_ENABLE_PERSISTENT_JOBSTORE"),
+        app.config.get("ENABLE_PERSISTENT_JOBSTORE", False),
+    )
+    lite_scheduler_db_path_raw = os.environ.get("LITE_SCHEDULER_DB_PATH")
+    lite_scheduler_db_path = (
+        _normalize_path(lite_scheduler_db_path_raw)
+        if lite_scheduler_db_path_raw
+        else None
+    )
+
+    app.config["ENABLE_SCHEDULER"] = lite_scheduler_enabled
+    app.config["ENABLE_PERSISTENT_JOBSTORE"] = bool(
+        lite_scheduler_enabled and lite_persistent_jobstore
+    )
+
+    if app.config["ENABLE_PERSISTENT_JOBSTORE"]:
+        if not lite_scheduler_db_path:
+            raise ValueError("启用 lite 持久化 JobStore 时必须设置 LITE_SCHEDULER_DB_PATH")
+        if lite_scheduler_db_path == lite_db_path:
+            raise ValueError("LITE_SCHEDULER_DB_PATH 不能与 LITE_DB_PATH 指向同一个文件")
+        Path(lite_scheduler_db_path).parent.mkdir(parents=True, exist_ok=True)
+        app.config["LITE_SCHEDULER_DB_PATH"] = lite_scheduler_db_path
+        app.config["SCHEDULER_JOBSTORES"] = {
+            "default": build_sqlite_jobstore_config(lite_scheduler_db_path)
+        }
+    else:
+        app.config["LITE_SCHEDULER_DB_PATH"] = lite_scheduler_db_path
+        app.config.pop("SCHEDULER_JOBSTORES", None)

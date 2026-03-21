@@ -28,6 +28,10 @@ from web.scheduler import notice_scheduler
 _scheduler_initialized = False
 
 
+def _is_lite_runtime(app) -> bool:
+    return app.config.get("_config_name") == "lite" or app.config.get("ENV") == "lite"
+
+
 def _mysql_operational_errors():
     errors = [sqlalchemy.exc.OperationalError]
     if pymysql is not None:
@@ -209,20 +213,44 @@ def init_app(app):
             scheduler._scheduler, "running", False
         ):
             app.logger.info("APScheduler已经初始化并且正在运行中，跳过重复初始化")
-            return
+            return True
         app.logger.warning("APScheduler已经初始化但未运行，尝试重新启动")
 
     # 设置时区为东八区（上海）
     app.config["SCHEDULER_TIMEZONE"] = "Asia/Shanghai"
 
+    is_lite_runtime = _is_lite_runtime(app)
+    persistent_mode = bool(app.config.get("ENABLE_PERSISTENT_JOBSTORE", False))
+    lite_fail_fast = bool(is_lite_runtime and persistent_mode)
+    jobstores = app.config.get("SCHEDULER_JOBSTORES") or {}
+    if persistent_mode and not jobstores:
+        message = "lite 持久化 scheduler 模式缺少 SCHEDULER_JOBSTORES 配置"
+        if lite_fail_fast:
+            error(message)
+            raise RuntimeError(message)
+        warning(message)
+
     # 在初始化APScheduler前，先检查数据库连接
     if not verify_apscheduler_database(app):
-        warning("APScheduler数据库连接检查失败，调度器可能无法正常工作")
+        message = (
+            "APScheduler数据库连接检查失败，调度器无法启动"
+            if lite_fail_fast
+            else "APScheduler数据库连接检查失败，调度器可能无法正常工作"
+        )
+        if lite_fail_fast:
+            error(message)
+            raise RuntimeError(message)
+        warning(message)
 
     # 初始化APScheduler
     try:
         debug("开始初始化APScheduler...")
-        scheduler.init_app(app)
+        jobstores_config = app.config.pop("SCHEDULER_JOBSTORES", None)
+        try:
+            scheduler.init_app(app)
+        finally:
+            if jobstores_config is not None:
+                app.config["SCHEDULER_JOBSTORES"] = jobstores_config
         debug("APScheduler初始化完成")
 
         # 手动设置jobstores
@@ -230,11 +258,15 @@ def init_app(app):
         if init_jobstores(app):
             debug("jobstores配置成功")
         else:
+            if lite_fail_fast:
+                raise RuntimeError("lite 持久化 JobStore 配置失败，无法启动调度器")
             warning("jobstores配置失败，将使用内存存储")
     except Exception as e:
         error(f"APScheduler初始化失败: {e}")
         error(traceback.format_exc())
-        return
+        if is_lite_runtime:
+            raise
+        return False
 
     # 检查scheduler状态并记录日志
     if hasattr(scheduler, "running"):
@@ -277,12 +309,12 @@ def init_app(app):
         scheduler.start()
         debug(f"APScheduler 调用start()方法完成")
         info(f"APScheduler 启动成功，运行状态: {scheduler.running}")
-
-        # 标记调度器已初始化
-        _scheduler_initialized = True
     except Exception as e:
         error(f"APScheduler 启动失败: {e}")
         error(traceback.format_exc())
+        if is_lite_runtime:
+            raise
+        return False
 
     # 再次检查scheduler状态
     if hasattr(scheduler, "running"):
@@ -355,7 +387,15 @@ def init_app(app):
                 error(f"APScheduler 重新启动失败: {e}")
                 error(traceback.format_exc())
 
+    if not hasattr(scheduler, "running") or not scheduler.running:
+        if not is_lite_runtime:
+            warning("APScheduler 未进入 running 状态，当前环境继续启动但不标记 scheduler 可用")
+            return False
+        raise RuntimeError("APScheduler 启动失败，调度器未进入 running 状态")
+
+    _scheduler_initialized = True
     app.logger.debug("scheduler监听模块加载完毕 ###")
+    return True
 
 
 def verify_apscheduler_database(app):
@@ -397,6 +437,14 @@ def verify_apscheduler_database(app):
                     pass
 
                 inspector = sqlalchemy.inspect(engine)
+                if engine.url.get_backend_name() == "sqlite":
+                    if not inspector.has_table("apscheduler_jobs"):
+                        warning(
+                            "APScheduler SQLite jobstore 任务表(apscheduler_jobs)不存在，首次启动时会自动创建"
+                        )
+                    debug("APScheduler SQLite jobstore 连接检查成功")
+                    return True
+
                 if not inspector.has_table("apscheduler_jobs"):
                     warning(
                         "APScheduler的任务表(apscheduler_jobs)不存在，可能需要初始化数据库"
