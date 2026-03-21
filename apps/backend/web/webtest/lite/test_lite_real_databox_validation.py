@@ -38,17 +38,14 @@ def test_get_fundinfo_cache_file_uses_lite_cache_prefix():
 
 @pytest.mark.manual
 @pytest.mark.integration
-def test_lite_real_databox_fund_info_chain_writes_csv_cache(lite_app):
+def test_lite_real_databox_fund_info_chain_writes_default_sqlite_cache(lite_app):
     if os.environ.get(_ENABLE_ENV) != "1":
         pytest.skip(f"需要显式设置 {_ENABLE_ENV}=1 才执行真实 DataBox 验证")
 
     with lite_app.app_context():
         data_box = DataBox()
-        cache_file = get_fundinfo_cache_file(
-            current_app.config["XALPHA_CACHE_DIR"],
-            "000001",
-        )
-        cache_file.unlink(missing_ok=True)
+        cache_file = Path(current_app.config["XALPHA_CACHE_SQLITE_PATH"])
+        assert not cache_file.exists()
 
         try:
             fund = data_box.fund_info("000001")

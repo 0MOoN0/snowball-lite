@@ -47,7 +47,12 @@ def test_create_app_rejects_long_lived_lite_db_path_under_pytest(
 ):
     monkeypatch.setenv("LITE_DB_PATH", str(get_default_lite_db_path()))
     monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", str(tmp_path / "pytest-lite_xalpha_cache"))
-    monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "csv")
+    monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "sql")
+    monkeypatch.setenv(
+        "LITE_XALPHA_CACHE_SQLITE_PATH",
+        str(tmp_path / "pytest-lite_xalpha_cache.db"),
+    )
+    monkeypatch.setenv("LITE_ENABLE_XALPHA_SQL_CACHE", "true")
 
     with pytest.raises(ValueError, match="长期 lite 业务库"):
         create_app("lite")

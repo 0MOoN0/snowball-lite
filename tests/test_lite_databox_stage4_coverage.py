@@ -31,7 +31,10 @@ def _make_fundinfo_payload():
     )
 
 
-def test_lite_databox_fund_info_writes_and_reuses_csv_cache():
+def test_lite_databox_fund_info_writes_and_reuses_csv_cache(monkeypatch, tmp_path):
+    monkeypatch.setenv("LITE_DB_PATH", str(tmp_path / "pytest-snowball-lite.db"))
+    monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", str(tmp_path / "pytest-lite_xalpha_cache"))
+    monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "csv")
     app = create_app("lite")
 
     with app.app_context():

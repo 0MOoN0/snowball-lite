@@ -18,6 +18,7 @@ from web.common.utils.backend_paths import (
     ensure_test_lite_db_path_isolated,
     get_default_lite_db_path,
     get_default_lite_xalpha_cache_dir,
+    get_default_lite_xalpha_cache_sqlite_path,
     get_default_xalpha_cache_dir,
 )
 
@@ -503,16 +504,21 @@ class LiteConfig(Config):
     ENABLE_PERSISTENT_JOBSTORE = False
     LITE_SCHEDULER_DB_PATH = None
     ENABLE_PROFILER = False
-    ENABLE_XALPHA_SQL_CACHE = False
+    ENABLE_XALPHA_SQL_CACHE = True
     ENABLE_ENGINE_LOG = False
-    XALPHA_CACHE_BACKEND = os.environ.get("LITE_XALPHA_CACHE_BACKEND", "csv").lower()
+    XALPHA_CACHE_BACKEND = os.environ.get("LITE_XALPHA_CACHE_BACKEND", "sql").lower()
     XALPHA_CACHE_DIR = os.path.abspath(
         os.environ.get(
             "LITE_XALPHA_CACHE_DIR",
             str(get_default_lite_xalpha_cache_dir()),
         )
     )
-    XALPHA_CACHE_SQLITE_PATH = os.environ.get("LITE_XALPHA_CACHE_SQLITE_PATH")
+    XALPHA_CACHE_SQLITE_PATH = _normalize_path(
+        os.environ.get(
+            "LITE_XALPHA_CACHE_SQLITE_PATH",
+            str(get_default_lite_xalpha_cache_sqlite_path()),
+        )
+    )
 
     REDIS_CLIENT = {}
     SCHEDULER_JOBSTORES = {}
@@ -554,6 +560,19 @@ def apply_runtime_overrides(app, config_name: str) -> None:
         os.environ.get("LITE_DB_PATH", str(get_default_lite_db_path()))
     )
     lite_db_uri = f"sqlite:///{lite_db_path}"
+    lite_xalpha_sql_cache_enabled = _parse_env_bool(
+        os.environ.get("LITE_ENABLE_XALPHA_SQL_CACHE"),
+        app.config.get("ENABLE_XALPHA_SQL_CACHE", True),
+    )
+    lite_xalpha_cache_sqlite_path = _normalize_path(
+        os.environ.get(
+            "LITE_XALPHA_CACHE_SQLITE_PATH",
+            app.config.get(
+                "XALPHA_CACHE_SQLITE_PATH",
+                str(get_default_lite_xalpha_cache_sqlite_path()),
+            ),
+        )
+    )
 
     app.config["LITE_DB_PATH"] = lite_db_path
     app.config["LITE_DB_URI"] = lite_db_uri
@@ -561,9 +580,10 @@ def apply_runtime_overrides(app, config_name: str) -> None:
     app.config["SQLALCHEMY_BINDS"] = {
         "snowball": lite_db_uri,
     }
+    app.config["ENABLE_XALPHA_SQL_CACHE"] = lite_xalpha_sql_cache_enabled
     app.config["XALPHA_CACHE_BACKEND"] = os.environ.get(
         "LITE_XALPHA_CACHE_BACKEND",
-        app.config.get("XALPHA_CACHE_BACKEND", "csv"),
+        app.config.get("XALPHA_CACHE_BACKEND", "sql"),
     ).lower()
     app.config["XALPHA_CACHE_DIR"] = os.path.abspath(
         os.environ.get(
@@ -574,9 +594,7 @@ def apply_runtime_overrides(app, config_name: str) -> None:
             ),
         )
     )
-    app.config["XALPHA_CACHE_SQLITE_PATH"] = os.environ.get(
-        "LITE_XALPHA_CACHE_SQLITE_PATH"
-    )
+    app.config["XALPHA_CACHE_SQLITE_PATH"] = lite_xalpha_cache_sqlite_path
     lite_scheduler_enabled = _parse_env_bool(
         os.environ.get("LITE_ENABLE_SCHEDULER"),
         app.config.get("ENABLE_SCHEDULER", False),

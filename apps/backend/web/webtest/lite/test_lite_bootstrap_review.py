@@ -201,7 +201,7 @@ def test_lite_gunicorn_check_config_passes(tmp_path: pathlib.Path) -> None:
     pytest.importorskip("gunicorn")
 
     db_path = tmp_path / "lite_gunicorn.db"
-    cache_dir = tmp_path / "lite_gunicorn_cache"
+    cache_sqlite_path = tmp_path / "lite_gunicorn_cache.db"
     env = os.environ.copy()
     pythonpath = [str(REPO_ROOT)]
     if env.get("PYTHONPATH"):
@@ -209,8 +209,9 @@ def test_lite_gunicorn_check_config_passes(tmp_path: pathlib.Path) -> None:
 
     env["PYTHONPATH"] = os.pathsep.join(pythonpath)
     env["LITE_DB_PATH"] = str(db_path)
-    env["LITE_XALPHA_CACHE_DIR"] = str(cache_dir)
-    env["LITE_XALPHA_CACHE_BACKEND"] = "csv"
+    env["LITE_XALPHA_CACHE_BACKEND"] = "sql"
+    env["LITE_XALPHA_CACHE_SQLITE_PATH"] = str(cache_sqlite_path)
+    env["LITE_ENABLE_XALPHA_SQL_CACHE"] = "true"
     env["LITE_FLASK_PORT"] = "5002"
 
     result = subprocess.run(
@@ -220,7 +221,7 @@ def test_lite_gunicorn_check_config_passes(tmp_path: pathlib.Path) -> None:
             "gunicorn.app.wsgiapp",
             "--check-config",
             "-c",
-            "web/gunicorn_lite.config.py",
+            "apps/backend/web/gunicorn_lite.config.py",
             "web.lite_application:app",
         ],
         cwd=REPO_ROOT,

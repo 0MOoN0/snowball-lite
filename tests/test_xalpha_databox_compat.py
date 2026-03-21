@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import threading
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -20,6 +21,10 @@ from xalpha.info import fundinfo as fundinfo_cls
 from xalpha.universal import cachedio
 
 pytestmark = [pytest.mark.local, pytest.mark.usefixtures("lite_runtime_paths")]
+
+
+def _engine_database_path(engine) -> Path:
+    return Path(engine.url.database).resolve()
 
 
 def test_cachedio_sql_backend_bootstraps_missing_sqlite_table(tmp_path):
@@ -99,6 +104,25 @@ def test_fundinfo_sql_backend_reads_existing_sqlite_cache(tmp_path):
         engine.dispose()
 
 
+def test_lite_default_sql_cache_backend_uses_dedicated_sqlite_engine():
+    app = create_app("lite")
+
+    with app.app_context():
+        cache_settings = webcons.resolve_xalpha_cache_settings(
+            default_engine=models.db.engine,
+        )
+        cache_engine = cache_settings["backend"]["path"]
+
+        assert cache_settings["backend_name"] == "sql"
+        assert cache_engine is not models.db.engine
+        assert _engine_database_path(cache_engine) == Path(
+            app.config["XALPHA_CACHE_SQLITE_PATH"]
+        ).resolve()
+        assert _engine_database_path(cache_engine) != Path(
+            app.config["LITE_DB_PATH"]
+        ).resolve()
+
+
 def test_lite_xa_service_adapter_prefers_csv_cache_backend(tmp_path):
     app = create_app("lite")
     cache_dir = (tmp_path / "lite_xalpha_cache").resolve()
@@ -147,12 +171,13 @@ def test_lite_databox_fund_info_uses_configured_cache_backend():
 
         assert fund is not None
         assert mock_fundinfo.call_args.args == ("000001",)
-        assert mock_fundinfo.call_args.kwargs == {
-            "save": True,
-            "fetch": True,
-            "form": "csv",
-            "path": app.config["XALPHA_CACHE_DIR"] + "/INFO-",
-        }
+        fundinfo_kwargs = mock_fundinfo.call_args.kwargs
+        assert fundinfo_kwargs["save"] is True
+        assert fundinfo_kwargs["fetch"] is True
+        assert fundinfo_kwargs["form"] == "sql"
+        assert _engine_database_path(fundinfo_kwargs["path"]) == Path(
+            app.config["XALPHA_CACHE_SQLITE_PATH"]
+        ).resolve()
 
 
 def test_lite_xa_data_adapter_get_daily_uses_configured_cache_backend():
@@ -181,27 +206,29 @@ def test_lite_xa_data_adapter_get_daily_uses_configured_cache_backend():
             )
 
         assert len(result) == 2
-        assert mock_fundinfo.call_args.kwargs == {
-            "code": "000001",
-            "save": True,
-            "fetch": True,
-            "form": "csv",
-            "path": app.config["XALPHA_CACHE_DIR"] + "/INFO-",
-        }
+        fundinfo_kwargs = mock_fundinfo.call_args.kwargs
+        assert fundinfo_kwargs["code"] == "000001"
+        assert fundinfo_kwargs["save"] is True
+        assert fundinfo_kwargs["fetch"] is True
+        assert fundinfo_kwargs["form"] == "sql"
+        assert _engine_database_path(fundinfo_kwargs["path"]) == Path(
+            app.config["XALPHA_CACHE_SQLITE_PATH"]
+        ).resolve()
 
 
 def test_global_databox_refreshes_cache_backend_between_lite_apps(
     monkeypatch, tmp_path
 ):
-    cache_one = str((tmp_path / "cache-one").resolve())
-    cache_two = str((tmp_path / "cache-two").resolve())
+    cache_one = (tmp_path / "cache-one.db").resolve()
+    cache_two = (tmp_path / "cache-two.db").resolve()
     original_local = dict(global_databox.xa_service.fund_info_db_setting)
     original_global = dict(webcons.XaFundInfoSetting.DB_SETTING)
 
     try:
         global_databox.xa_service.fund_info_db_setting = {}
 
-        monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", cache_one)
+        monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "sql")
+        monkeypatch.setenv("LITE_XALPHA_CACHE_SQLITE_PATH", str(cache_one))
         app_one = create_app("lite")
         with app_one.app_context():
             with patch(
@@ -214,9 +241,9 @@ def test_global_databox_refreshes_cache_backend_between_lite_apps(
             ) as first_call:
                 global_databox.fund_info("000001")
 
-            assert first_call.call_args.kwargs["path"] == cache_one + "/INFO-"
+            assert _engine_database_path(first_call.call_args.kwargs["path"]) == cache_one
 
-        monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", cache_two)
+        monkeypatch.setenv("LITE_XALPHA_CACHE_SQLITE_PATH", str(cache_two))
         app_two = create_app("lite")
         with app_two.app_context():
             with patch(
@@ -229,13 +256,13 @@ def test_global_databox_refreshes_cache_backend_between_lite_apps(
             ) as second_call:
                 global_databox.fund_info("000001")
 
-            assert second_call.call_args.kwargs["path"] == cache_two + "/INFO-"
+            assert _engine_database_path(second_call.call_args.kwargs["path"]) == cache_two
     finally:
         global_databox.xa_service.fund_info_db_setting = original_local
         webcons.XaFundInfoSetting.DB_SETTING = original_global
 
 
-def test_disable_xalpha_sql_cache_forces_memory_backend():
+def test_lite_sql_backend_fails_fast_when_sql_cache_disabled():
     app = create_app("lite")
     app.config["ENABLE_XALPHA_SQL_CACHE"] = False
     app.config["XALPHA_CACHE_BACKEND"] = "sql"
@@ -243,25 +270,62 @@ def test_disable_xalpha_sql_cache_forces_memory_backend():
     with app.app_context():
         fake_xa = Mock()
 
-        cache_settings = webcons.apply_xalpha_cache_settings(
-            fake_xa,
-            default_engine=object(),
-        )
+        with pytest.raises(ValueError, match="LITE_ENABLE_XALPHA_SQL_CACHE"):
+            webcons.apply_xalpha_cache_settings(
+                fake_xa,
+                default_engine=object(),
+            )
 
-        assert cache_settings["backend_name"] == "memory"
-        assert fake_xa.set_backend.call_args.kwargs["backend"] == "memory"
+
+def test_lite_sql_backend_fails_fast_without_sqlite_path():
+    app = create_app("lite")
+    app.config["XALPHA_CACHE_BACKEND"] = "sql"
+    app.config["XALPHA_CACHE_SQLITE_PATH"] = None
+
+    with app.app_context():
+        with pytest.raises(ValueError, match="LITE_XALPHA_CACHE_SQLITE_PATH"):
+            webcons.resolve_xalpha_cache_settings(default_engine=models.db.engine)
+
+
+def test_create_app_rejects_sql_cache_path_colliding_with_lite_db(
+    monkeypatch, tmp_path
+):
+    db_path = (tmp_path / "pytest-snowball-lite.db").resolve()
+    monkeypatch.setenv("LITE_DB_PATH", str(db_path))
+    monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "sql")
+    monkeypatch.setenv("LITE_XALPHA_CACHE_SQLITE_PATH", str(db_path))
+    monkeypatch.setenv("LITE_ENABLE_XALPHA_SQL_CACHE", "true")
+
+    with pytest.raises(ValueError, match="LITE_XALPHA_CACHE_SQLITE_PATH"):
+        create_app("lite")
+
+
+def test_create_app_rejects_sql_backend_when_sql_cache_disabled(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("LITE_DB_PATH", str((tmp_path / "pytest-snowball-lite.db").resolve()))
+    monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "sql")
+    monkeypatch.setenv(
+        "LITE_XALPHA_CACHE_SQLITE_PATH",
+        str((tmp_path / "pytest-lite-xalpha-cache.db").resolve()),
+    )
+    monkeypatch.setenv("LITE_ENABLE_XALPHA_SQL_CACHE", "false")
+
+    with pytest.raises(ValueError, match="LITE_ENABLE_XALPHA_SQL_CACHE"):
+        create_app("lite")
 
 
 def test_lite_xa_service_get_daily_refreshes_backend_between_lite_apps(
     monkeypatch, tmp_path
 ):
-    cache_one = str((tmp_path / "daily-cache-one").resolve())
-    cache_two = str((tmp_path / "daily-cache-two").resolve())
+    cache_one = (tmp_path / "daily-cache-one.db").resolve()
+    cache_two = (tmp_path / "daily-cache-two.db").resolve()
 
-    monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", cache_one)
+    monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "sql")
+    monkeypatch.setenv("LITE_XALPHA_CACHE_SQLITE_PATH", str(cache_one))
     app_one = create_app("lite")
 
-    monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", cache_two)
+    monkeypatch.setenv("LITE_XALPHA_CACHE_SQLITE_PATH", str(cache_two))
     app_two = create_app("lite")
 
     adapter = XaServiceAdapter()
@@ -272,7 +336,7 @@ def test_lite_xa_service_get_daily_refreshes_backend_between_lite_apps(
         return_value=pd.DataFrame(),
     ):
         adapter.get_daily("SZ000001")
-        assert xa.universal.ioconf["path"] == cache_two
+        assert _engine_database_path(xa.universal.ioconf["path"]) == cache_two
 
     with app_one.app_context(), patch.object(
         adapter,
@@ -280,7 +344,7 @@ def test_lite_xa_service_get_daily_refreshes_backend_between_lite_apps(
         return_value=pd.DataFrame(),
     ):
         adapter.get_daily("SZ000001")
-        assert xa.universal.ioconf["path"] == cache_one
+        assert _engine_database_path(xa.universal.ioconf["path"]) == cache_one
 
 
 def test_cachedio_invalid_backend_fails_fast():
@@ -300,13 +364,14 @@ def test_cachedio_invalid_backend_fails_fast():
 def test_lite_xa_service_get_daily_serializes_backend_refresh(
     monkeypatch, tmp_path
 ):
-    cache_one = str((tmp_path / "race-cache-one").resolve())
-    cache_two = str((tmp_path / "race-cache-two").resolve())
+    cache_one = (tmp_path / "race-cache-one.db").resolve()
+    cache_two = (tmp_path / "race-cache-two.db").resolve()
 
-    monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", cache_one)
+    monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "sql")
+    monkeypatch.setenv("LITE_XALPHA_CACHE_SQLITE_PATH", str(cache_one))
     app_one = create_app("lite")
 
-    monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", cache_two)
+    monkeypatch.setenv("LITE_XALPHA_CACHE_SQLITE_PATH", str(cache_two))
     app_two = create_app("lite")
 
     adapter = XaServiceAdapter()
@@ -324,7 +389,7 @@ def test_lite_xa_service_get_daily_serializes_backend_refresh(
         else:
             second_entered.set()
 
-        results[thread_name] = xa.universal.ioconf["path"]
+        results[thread_name] = _engine_database_path(xa.universal.ioconf["path"])
         return pd.DataFrame()
 
     adapter.execute_xa = fake_execute_xa
@@ -369,13 +434,14 @@ def test_lite_xa_service_get_daily_serializes_backend_refresh(
 def test_apply_xalpha_cache_settings_serializes_with_get_daily_scope(
     monkeypatch, tmp_path
 ):
-    cache_one = str((tmp_path / "lock-gap-cache-one").resolve())
-    cache_two = str((tmp_path / "lock-gap-cache-two").resolve())
+    cache_one = (tmp_path / "lock-gap-cache-one.db").resolve()
+    cache_two = (tmp_path / "lock-gap-cache-two.db").resolve()
 
-    monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", cache_one)
+    monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "sql")
+    monkeypatch.setenv("LITE_XALPHA_CACHE_SQLITE_PATH", str(cache_one))
     app_one = create_app("lite")
 
-    monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", cache_two)
+    monkeypatch.setenv("LITE_XALPHA_CACHE_SQLITE_PATH", str(cache_two))
     app_two = create_app("lite")
 
     adapter = XaServiceAdapter()
@@ -388,7 +454,7 @@ def test_apply_xalpha_cache_settings_serializes_with_get_daily_scope(
     def fake_execute_xa(callable_name=None, *args, **kwargs):
         first_entered.set()
         assert allow_first_finish.wait(timeout=5)
-        results["path_seen"] = xa.universal.ioconf["path"]
+        results["path_seen"] = _engine_database_path(xa.universal.ioconf["path"])
         return pd.DataFrame()
 
     adapter.execute_xa = fake_execute_xa
@@ -407,7 +473,9 @@ def test_apply_xalpha_cache_settings_serializes_with_get_daily_scope(
                     xa,
                     default_engine=models.db.engine,
                 )
-                results["path_after_apply"] = xa.universal.ioconf["path"]
+                results["path_after_apply"] = _engine_database_path(
+                    xa.universal.ioconf["path"]
+                )
                 second_applied.set()
         except Exception as exc:  # pragma: no cover - test failure path
             errors.append(exc)

@@ -974,15 +974,20 @@ class MysqlToSqliteBusinessMigrationService:
     def _build_target_app(self, target_sqlite: Path) -> Flask:
         app = Flask("mysql-to-sqlite-business-migration")
         runtime_cache_dir = target_sqlite.parent / "lite_xalpha_cache"
+        runtime_cache_sqlite = target_sqlite.parent / "lite_xalpha_cache.db"
 
         old_env = {
             "LITE_DB_PATH": os.environ.get("LITE_DB_PATH"),
             "LITE_XALPHA_CACHE_DIR": os.environ.get("LITE_XALPHA_CACHE_DIR"),
             "LITE_XALPHA_CACHE_BACKEND": os.environ.get("LITE_XALPHA_CACHE_BACKEND"),
+            "LITE_XALPHA_CACHE_SQLITE_PATH": os.environ.get("LITE_XALPHA_CACHE_SQLITE_PATH"),
+            "LITE_ENABLE_XALPHA_SQL_CACHE": os.environ.get("LITE_ENABLE_XALPHA_SQL_CACHE"),
         }
         os.environ["LITE_DB_PATH"] = str(target_sqlite)
         os.environ["LITE_XALPHA_CACHE_DIR"] = str(runtime_cache_dir)
-        os.environ["LITE_XALPHA_CACHE_BACKEND"] = "csv"
+        os.environ["LITE_XALPHA_CACHE_BACKEND"] = "sql"
+        os.environ["LITE_XALPHA_CACHE_SQLITE_PATH"] = str(runtime_cache_sqlite)
+        os.environ["LITE_ENABLE_XALPHA_SQL_CACHE"] = "true"
 
         try:
             app.config.from_object(settings.config["lite"])

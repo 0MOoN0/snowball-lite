@@ -119,7 +119,7 @@ gunicorn -c web/gunicorn.config.py web.application:app
 
 ```bash
 export LITE_DB_PATH=/absolute/path/to/snowball_lite.db
-export LITE_XALPHA_CACHE_DIR=/absolute/path/to/lite_xalpha_cache
+export LITE_XALPHA_CACHE_SQLITE_PATH=/absolute/path/to/lite_xalpha_cache.db
 cd apps/backend
 gunicorn -c web/gunicorn_lite.config.py web.lite_application:app
 ```
@@ -134,7 +134,7 @@ gunicorn -c web/gunicorn_lite.config.py web.lite_application:app
 
 ```bash
 export LITE_DB_PATH=/absolute/path/to/snowball_lite.db
-export LITE_XALPHA_CACHE_DIR=/absolute/path/to/lite_xalpha_cache
+export LITE_XALPHA_CACHE_SQLITE_PATH=/absolute/path/to/lite_xalpha_cache.db
 cd apps/backend
 uv run --no-dev python -m web.lite_application
 ```
@@ -180,14 +180,25 @@ uv run --no-dev python -m web.lite_application
 - `apps/backend/web/data/lite_runtime/snowball_lite_dev.db` 是 lite 的 dev 长期开发库推荐路径
 - `test` 口径默认使用 pytest 临时路径里的 SQLite 文件，文件名建议带 `pytest-` 前缀
 - `stg` 不建议长期常驻；只在发版前演练或数据检查时，从 stable 复制快照，例如 `apps/backend/web/data/lite_runtime/snowball_lite_stg_YYYYMMDD.db`
-- `LITE_XALPHA_CACHE_DIR` 不传时，默认写到 `apps/backend/web/data/lite_runtime/lite_xalpha_cache`
-- 如果仓库根目录还留着旧的 `data/*.db` 或 `data/lite_xalpha_cache`，lite 启动时会自动迁到 `apps/backend/web/data/lite_runtime/`
+- `LITE_XALPHA_CACHE_BACKEND` 默认是 `sql`
+- `LITE_ENABLE_XALPHA_SQL_CACHE` 默认是 `true`
+- `LITE_XALPHA_CACHE_SQLITE_PATH` 不传时，默认写到 `apps/backend/web/data/lite_runtime/lite_xalpha_cache.db`
+- `LITE_XALPHA_CACHE_DIR` 只在显式切回 `csv` backend 时使用
+- 旧的 `data/lite_xalpha_cache` 不再作为默认路径，也不会为默认 SQLite 模式做迁移；它继续按可丢弃缓存处理
 - Lite 模式只保证最小启动链路，不等同于完整生产能力
 - lite 默认关闭 scheduler；如果只是临时验证，可设置 `LITE_ENABLE_SCHEDULER=true`
 - 如果需要持久化 jobstore，再加 `LITE_ENABLE_PERSISTENT_JOBSTORE=true` 和 `LITE_SCHEDULER_DB_PATH=/absolute/path/to/lite_scheduler.db`
 - `LITE_SCHEDULER_DB_PATH` 不能和 `LITE_DB_PATH` 指向同一个 SQLite 文件
 - 如果后续需要完整验证 scheduler 或异步任务，仍优先用 `dev/stg/test`
-- 如果你本地创建了 `.vscode/launch.json`，可以直接使用 `Snowball Lite` 或 `Snowball Lite (Gunicorn)` 启动项
+- 如果你本地创建了 `.vscode/launch.json`，可以直接使用这四个启动项：
+  - `Snowball Lite (Prod DB)`
+  - `Snowball Lite (Prod DB, Gunicorn)`
+  - `Snowball Lite (Dev DB)`
+  - `Snowball Lite (Dev DB, Gunicorn)`
+- 也可以直接用两个联动启动项，一次同时拉起 Gunicorn 后端和前端 Vite：
+  - `Snowball Lite (Prod DB, Gunicorn + Frontend)`
+  - `Snowball Lite (Dev DB, Gunicorn + Frontend)`
+- Gunicorn 调试启动项会直接跑 `.venv/bin/gunicorn`，并打开 `gevent` / `subProcess` 支持，避免 VSCode 调试层和 gunicorn worker 分叉冲突
 
 更多配置说明见 `docs/backend/runtime-config.md` 与 `apps/backend/web/settings.py` 注释。
 

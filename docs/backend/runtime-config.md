@@ -24,7 +24,7 @@ python -m web.lite_application
 
 ```bash
 export LITE_DB_PATH=/absolute/path/to/snowball_lite.db
-export LITE_XALPHA_CACHE_DIR=/absolute/path/to/lite_xalpha_cache
+export LITE_XALPHA_CACHE_SQLITE_PATH=/absolute/path/to/lite_xalpha_cache.db
 cd apps/backend
 uv run --no-dev python -m web.lite_application
 ```
@@ -35,9 +35,10 @@ uv run --no-dev python -m web.lite_application
 | --- | --- | --- |
 | `SNOW_APP_STATUS` | 选择运行环境 | lite 主线固定为 `lite` |
 | `LITE_DB_PATH` | lite SQLite 文件路径 | 默认落到 `apps/backend/web/data/lite_runtime/snowball_lite.db` |
-| `LITE_XALPHA_CACHE_DIR` | lite 下 `xalpha` CSV 缓存目录 | 默认落到 `apps/backend/web/data/lite_runtime/lite_xalpha_cache` |
-| `LITE_XALPHA_CACHE_BACKEND` | lite 下缓存后端 | 默认 `csv` |
-| `LITE_XALPHA_CACHE_SQLITE_PATH` | lite 下 SQL cache 路径 | 仅在特殊场景需要 |
+| `LITE_XALPHA_CACHE_BACKEND` | lite 下缓存后端 | 默认 `sql`，可显式切回 `csv` |
+| `LITE_ENABLE_XALPHA_SQL_CACHE` | lite 下是否允许 SQL cache | 默认 `true`；`backend=sql` 时必须开启 |
+| `LITE_XALPHA_CACHE_SQLITE_PATH` | lite 下独立 SQL cache 路径 | 默认落到 `apps/backend/web/data/lite_runtime/lite_xalpha_cache.db`，且不能与 `LITE_DB_PATH` 指向同一文件 |
+| `LITE_XALPHA_CACHE_DIR` | lite 下 `xalpha` CSV 缓存目录 | 只在显式切回 `csv` backend 时使用 |
 | `LITE_FLASK_PORT` | lite 入口监听端口 | 默认 `5001` |
 | `LITE_ENABLE_SCHEDULER` | 是否临时启用 scheduler | 默认关闭 |
 | `LITE_ENABLE_PERSISTENT_JOBSTORE` | 是否启用持久化 JobStore | 默认关闭 |
@@ -47,7 +48,7 @@ uv run --no-dev python -m web.lite_application
 
 - lite 入口会自动把 `SNOW_APP_STATUS` 固定成 `lite`
 - lite 启动前会执行 `bootstrap_lite_database(...)`，不要把 `db.create_all()` 当迁移替代方案
-- 如果仓库根目录还有旧的 `data/*.db` 或 `data/lite_xalpha_cache`，lite 启动时会自动迁到 `apps/backend/web/data/lite_runtime/`
+- 旧的 `data/lite_xalpha_cache` 不再作为默认路径，也不会为默认 SQLite 模式做迁移；它继续按可丢弃缓存处理
 - test 口径默认应使用 pytest 临时路径里的 SQLite 文件，不要直接指向 stable/prod 或 dev 长期库
 
 ## 历史多环境变量

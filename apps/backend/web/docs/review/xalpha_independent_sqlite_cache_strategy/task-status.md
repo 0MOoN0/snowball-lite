@@ -1,0 +1,42 @@
+# xalpha_independent_sqlite_cache_strategy 任务状态
+
+- source_doc: `/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/xalpha_independent_sqlite_cache_strategy.md`
+- current_status: `completed`
+- current_round: `1`
+- files_touched:
+  - `/Users/leon/projects/snowball-lite/README.md`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/common/cons/webcons.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/common/utils/backend_paths.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/xalpha_independent_sqlite_cache_strategy.md`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/docs/环境变量配置指南.md`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/lite_bootstrap.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/services/migration/mysql_to_sqlite_business_migration_service.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/settings.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/webtest/conftest.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/webtest/lite/test_backend_workspace_paths.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/webtest/lite/test_lite_database_layering.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/webtest/lite/test_lite_bootstrap_review.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/webtest/lite/test_lite_real_databox_validation.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/webtest/lite_runtime_fixtures.py`
+  - `/Users/leon/projects/snowball-lite/docs/backend/runtime-config.md`
+  - `/Users/leon/projects/snowball-lite/tests/test_lite_databox_stage4_coverage.py`
+  - `/Users/leon/projects/snowball-lite/tests/test_xalpha_databox_compat.py`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/docs/review/xalpha_independent_sqlite_cache_strategy/task-status.md`
+  - `/Users/leon/projects/snowball-lite/apps/backend/web/docs/review/xalpha_independent_sqlite_cache_strategy/round-01-review.md`
+- commands_run:
+  - `sed -n '1,260p' /Users/leon/.codex/skills/team-work/SKILL.md`
+  - `sed -n '1,260p' apps/backend/web/docs/task/xalpha_independent_sqlite_cache_strategy.md`
+  - `git status --short`
+  - `ls -la apps/backend/web/docs/review`
+  - `rg -n "xalpha_independent_sqlite_cache_strategy|xalpha cache|独立 SQLite cache" apps/backend/web/docs/review apps/backend/web/docs/task apps/backend/web/docs/desc -g '*.md'`
+  - `PYTHONPATH=apps/backend python -m pytest tests/test_xalpha_databox_compat.py tests/test_lite_databox_stage4_coverage.py apps/backend/web/webtest/lite/test_backend_workspace_paths.py apps/backend/web/webtest/lite/test_lite_database_layering.py -q`
+  - `PYTHONPATH=apps/backend python -m pytest apps/backend/web/webtest/lite/test_lite_bootstrap_review.py apps/backend/web/webtest/lite/test_mysql_to_sqlite_business_migration.py apps/backend/web/webtest/lite/test_lite_scheduler_sqlite_support.py apps/backend/web/webtest/lite/test_lite_real_databox_validation.py apps/backend/web/webtest/lite/test_lite_stage5_schema_expansion.py -q`
+  - `PYTHONPATH=apps/backend python -m pytest apps/backend/web/webtest/lite/test_lite_bootstrap_review.py apps/backend/web/webtest/lite/test_mysql_to_sqlite_business_migration.py apps/backend/web/webtest/lite/test_lite_scheduler_sqlite_support.py apps/backend/web/webtest/lite/test_lite_real_databox_validation.py apps/backend/web/webtest/lite/test_lite_stage5_schema_expansion.py -k 'not test_lite_gunicorn_check_config_passes' -q`
+  - `PYTHONPATH=apps/backend python -m pytest apps/backend/web/webtest/lite/test_lite_real_databox_validation.py -q`
+  - `git diff --stat`
+  - `PYTHONPATH=apps/backend python -m pytest apps/backend/web/webtest/lite/test_lite_bootstrap_review.py::test_lite_gunicorn_check_config_passes -q`
+  - `PYTHONPATH=apps/backend python -m pytest apps/backend/web/webtest/lite/test_lite_bootstrap_review.py apps/backend/web/webtest/lite/test_mysql_to_sqlite_business_migration.py apps/backend/web/webtest/lite/test_lite_scheduler_sqlite_support.py apps/backend/web/webtest/lite/test_lite_real_databox_validation.py apps/backend/web/webtest/lite/test_lite_stage5_schema_expansion.py -q`
+- latest_blockers:
+  - 本任务范围内没有剩余 blocker。
+- next_action:
+  - 无。

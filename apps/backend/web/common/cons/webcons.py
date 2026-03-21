@@ -139,6 +139,17 @@ def _ensure_cache_dir(path: str) -> str:
     return abs_path
 
 
+def _normalize_optional_path(path: str | None) -> str | None:
+    if path is None:
+        return None
+
+    normalized = str(path).strip()
+    if not normalized:
+        return None
+
+    return os.path.abspath(normalized)
+
+
 def _get_sqlite_cache_engine(sqlite_path: str):
     from sqlalchemy import create_engine
 
@@ -177,19 +188,29 @@ def resolve_xalpha_cache_settings(default_engine=None):
     cache_dir = None
     cache_sqlite_path = None
     enable_xalpha_sql_cache = True
+    lite_db_path = None
+    is_lite = False
 
     if has_app_context():
+        config = current_app.config
         backend_name = str(
-            current_app.config.get("XALPHA_CACHE_BACKEND", backend_name)
+            config.get("XALPHA_CACHE_BACKEND", backend_name)
         ).lower()
-        cache_dir = current_app.config.get("XALPHA_CACHE_DIR")
-        cache_sqlite_path = current_app.config.get("XALPHA_CACHE_SQLITE_PATH")
+        cache_dir = config.get("XALPHA_CACHE_DIR")
+        cache_sqlite_path = config.get("XALPHA_CACHE_SQLITE_PATH")
         enable_xalpha_sql_cache = bool(
-            current_app.config.get("ENABLE_XALPHA_SQL_CACHE", True)
+            config.get("ENABLE_XALPHA_SQL_CACHE", True)
         )
+        lite_db_path = config.get("LITE_DB_PATH")
+        env_name = str(config.get("_config_name") or config.get("ENV") or "").lower()
+        is_lite = env_name == "lite"
 
     # 兼容旧配置语义：关闭 SQL cache 时回退到内存缓存，但保留显式 CSV backend。
     if not enable_xalpha_sql_cache and backend_name == XaCacheBackend.SQL:
+        if is_lite:
+            raise ValueError(
+                "lite 模式下 backend=sql 时必须启用 LITE_ENABLE_XALPHA_SQL_CACHE"
+            )
         backend_name = XaCacheBackend.MEMORY
 
     if backend_name == XaCacheBackend.CSV:
@@ -223,9 +244,24 @@ def resolve_xalpha_cache_settings(default_engine=None):
     if backend_name != XaCacheBackend.SQL:
         raise ValueError(f"Unsupported xalpha cache backend: {backend_name}")
 
-    cache_engine = default_engine
-    if cache_sqlite_path:
+    cache_sqlite_path = _normalize_optional_path(cache_sqlite_path)
+    lite_db_path = _normalize_optional_path(lite_db_path)
+
+    if is_lite:
+        if not cache_sqlite_path:
+            raise ValueError(
+                "lite 模式下 backend=sql 时必须提供 LITE_XALPHA_CACHE_SQLITE_PATH"
+            )
+        if lite_db_path and cache_sqlite_path == lite_db_path:
+            raise ValueError(
+                "LITE_XALPHA_CACHE_SQLITE_PATH 不能与 LITE_DB_PATH 指向同一个文件"
+            )
+
         cache_engine = _get_sqlite_cache_engine(cache_sqlite_path)
+    else:
+        cache_engine = default_engine
+        if cache_sqlite_path:
+            cache_engine = _get_sqlite_cache_engine(cache_sqlite_path)
 
     return {
         "backend_name": backend_name,

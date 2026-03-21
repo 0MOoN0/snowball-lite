@@ -102,16 +102,27 @@ def migrate_legacy_repo_data(
 def ensure_lite_runtime_paths(app) -> dict[str, Path]:
     db_path = Path(app.config["LITE_DB_PATH"]).resolve()
     cache_dir = Path(app.config["XALPHA_CACHE_DIR"]).resolve()
+    cache_backend = str(app.config.get("XALPHA_CACHE_BACKEND", "sql")).lower()
+    cache_sqlite_path_raw = app.config.get("XALPHA_CACHE_SQLITE_PATH")
+    cache_sqlite_path = (
+        Path(cache_sqlite_path_raw).resolve() if cache_sqlite_path_raw else None
+    )
     migration_result = migrate_legacy_repo_data(
         legacy_data_root=get_legacy_repo_data_root(),
         runtime_root=db_path.parent,
         target_cache_dir=cache_dir,
         move_sqlite_files=db_path == get_default_lite_db_path().resolve(),
-        move_cache_dir=cache_dir == get_default_lite_xalpha_cache_dir().resolve(),
+        move_cache_dir=(
+            cache_backend == "csv"
+            and cache_dir == get_default_lite_xalpha_cache_dir().resolve()
+        ),
     )
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    if cache_backend == "csv":
+        cache_dir.mkdir(parents=True, exist_ok=True)
+    elif cache_sqlite_path is not None:
+        cache_sqlite_path.parent.mkdir(parents=True, exist_ok=True)
 
     if migration_result["moved"]:
         app.logger.info(
@@ -127,6 +138,7 @@ def ensure_lite_runtime_paths(app) -> dict[str, Path]:
     return {
         "db_path": db_path,
         "cache_dir": cache_dir,
+        "cache_sqlite_path": cache_sqlite_path,
     }
 
 
