@@ -1,20 +1,15 @@
 import pytest
-import uuid
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, timedelta
-from pytz import timezone
+from unittest.mock import Mock, patch
 
-from web.webtest.test_base import TestBaseWithRollback
 from web.routers.scheduler.scheduler_job_operation_routers import (
     manual_job_wrapper,
     SchedulerJobRunRouters
 )
-from web.common.cache import cache
-from web.common.cons import webcons
 from web.models.scheduler.scheduler_log import SchedulerLog
+from web.scheduler.manual_job_id import build_manual_job_id, decode_manual_job_id
 
 
-class TestManualJobWrapper(TestBaseWithRollback):
+class TestManualJobWrapper:
     """测试manual_job_wrapper包装函数"""
     
     def test_manual_job_wrapper_basic_execution(self):
@@ -69,18 +64,19 @@ class TestManualJobWrapper(TestBaseWithRollback):
         assert result2 == "x-y-z"
 
 
-class TestSchedulerJobRunRouters(TestBaseWithRollback):
+class TestSchedulerJobRunRouters:
     """测试SchedulerJobRunRouters类"""
     
     def setup_method(self):
         """每个测试方法前的设置"""
         self.router = SchedulerJobRunRouters()
         
+    @patch('web.routers.scheduler.scheduler_job_operation_routers.build_manual_job_id')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.cache')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.SchedulerLog')
     @patch('web.routers.scheduler.scheduler_job_operation_routers._get_parse')
-    def test_put_method_basic_functionality(self, mock_get_parse, mock_scheduler_log, mock_cache, mock_scheduler):
+    def test_put_method_basic_functionality(self, mock_get_parse, mock_scheduler_log, mock_cache, mock_scheduler, mock_build_manual_job_id):
         """测试put方法基本功能"""
         # 模拟_get_parse返回的parser
         mock_parser = Mock()
@@ -102,14 +98,11 @@ class TestSchedulerJobRunRouters(TestBaseWithRollback):
         mock_job = Mock()
         mock_job.func_ref = Mock(__name__='test_function')
         mock_scheduler.get_job.return_value = mock_job
-        
+
         # 模拟scheduler.add_job
         mock_scheduler.add_job.return_value = None
-        
-        # 模拟缓存操作
-        mock_redis_client = Mock()
-        mock_cache.get_redis_client.return_value = mock_redis_client
-        
+        mock_build_manual_job_id.return_value = "manual::mocked_uuid_str::dGVzdF9qb2JfaWQ"
+
         # 模拟SchedulerLog查询，返回None表示没有最近的任务记录
         mock_query = Mock()
         mock_scheduler_log.query = mock_query
@@ -120,31 +113,31 @@ class TestSchedulerJobRunRouters(TestBaseWithRollback):
         
         # 验证scheduler.get_job被调用
         mock_scheduler.get_job.assert_called_once_with('test_job_id')
-            
+
         # 验证scheduler.add_job被调用，且使用了manual_job_wrapper
         mock_scheduler.add_job.assert_called_once()
         call_args = mock_scheduler.add_job.call_args
-        
+
         # 验证func参数是manual_job_wrapper
         assert call_args[1]['func'] == manual_job_wrapper
-        
+        assert call_args[1]['id'] == "manual::mocked_uuid_str::dGVzdF9qb2JfaWQ"
+
         # 验证args参数包含原始函数和参数
         expected_args = [mock_job.func_ref, '2025-01-05', '2025-04-04']
         assert call_args[1]['args'] == expected_args
-        
+
         # 验证kwargs参数
         assert call_args[1]['kwargs'] == {'key': 'value'}
         
         # 验证其他参数
         assert call_args[1]['trigger'] == 'date'
         assert call_args[1]['misfire_grace_time'] == 3600
-        assert 'next_run_time' in call_args[1]
-        assert 'id' in call_args[1]
-        
-        # 验证缓存操作被调用
-        mock_cache.get_redis_client.assert_called_once()
-        mock_redis_client.set.assert_called_once()
-        
+        assert 'run_date' in call_args[1]
+
+        # 验证不再依赖 Redis 临时映射
+        mock_cache.get_redis_client.assert_not_called()
+        mock_build_manual_job_id.assert_called_once_with('test_job_id')
+
         # 验证返回结果
         assert result['code'] == 20000
         assert 'data' in result
@@ -172,10 +165,12 @@ class TestSchedulerJobRunRouters(TestBaseWithRollback):
         assert result['code'] != 200
         assert 'error' in result or 'message' in result
     
+    @patch('web.routers.scheduler.scheduler_job_operation_routers.build_manual_job_id')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.cache')
+    @patch('web.routers.scheduler.scheduler_job_operation_routers.SchedulerLog')
     @patch('web.routers.scheduler.scheduler_job_operation_routers._get_parse')
-    def test_put_method_with_empty_args_kwargs(self, mock_get_parse, mock_cache, mock_scheduler):
+    def test_put_method_with_empty_args_kwargs(self, mock_get_parse, mock_scheduler_log, mock_cache, mock_scheduler, mock_build_manual_job_id):
         """测试put方法处理空参数的情况"""
         # 模拟_get_parse函数和参数解析
         mock_parser = Mock()
@@ -196,11 +191,9 @@ class TestSchedulerJobRunRouters(TestBaseWithRollback):
         mock_job.func_ref = Mock(__name__='test_function')
         mock_scheduler.get_job.return_value = mock_job
         mock_scheduler.add_job.return_value = None
-        
-        # 模拟缓存操作
-        mock_redis_client = Mock()
-        mock_cache.get_redis_client.return_value = mock_redis_client
-        
+        mock_build_manual_job_id.return_value = "manual::mocked_uuid_str::dGVzdF9qb2JfaWQ"
+        mock_scheduler_log.query.filter.return_value.order_by.return_value.first.return_value = None
+
         result = self.router.put()
         
         # 验证scheduler.add_job被调用
@@ -212,45 +205,21 @@ class TestSchedulerJobRunRouters(TestBaseWithRollback):
         
         # 验证kwargs为空字典
         assert call_args[1]['kwargs'] == {}
-        
+        assert call_args[1]['id'] == "manual::mocked_uuid_str::dGVzdF9qb2JfaWQ"
+        mock_cache.get_redis_client.assert_not_called()
+        mock_build_manual_job_id.assert_called_once_with('test_job_id')
+
         assert result['code'] == 20000
     
-    @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler')
-    @patch('web.routers.scheduler.scheduler_job_operation_routers.cache')
-    def test_cache_key_generation(self, mock_cache, mock_scheduler):
-        """测试缓存键的生成逻辑"""
-        with patch('web.routers.scheduler.scheduler_job_operation_routers.reqparse') as mock_reqparse:
-            mock_parser = Mock()
-            mock_reqparse.RequestParser.return_value = mock_parser
-            
-            mock_args = {'job_id': 'test_job_id'}
-            mock_parser.parse_args.return_value = mock_args
-            
-            mock_job = Mock()
-            mock_job.func = Mock(__name__='test_function')
-            mock_scheduler.get_job.return_value = mock_job
-            mock_scheduler.add_job.return_value = None
-            
-            # 模拟uuid生成
-            with patch('web.routers.scheduler.scheduler_job_operation_routers.uuid.uuid4') as mock_uuid:
-                # 模拟str(uuid.uuid4())的返回值
-                mock_uuid.return_value.__str__ = Mock(return_value='mocked_uuid_str')
-                
-                self.router.put()
-                
-                # 验证缓存键的格式
-                mock_cache.get_redis_client().set.assert_called_once()
-                cache_call_args = mock_cache.get_redis_client().set.call_args[0]
-                
-                # 缓存键应该是 webcons.RedisKeyPrefix.DYNAMIC_JOB + new_job_id
-                expected_cache_key = f"{webcons.RedisKeyPrefix.DYNAMIC_JOB}mocked_uuid_str"
-                assert cache_call_args[0] == expected_cache_key
-                
-                # 缓存值应该是原始job_id
-                assert cache_call_args[1] == 'test_job_id'
+    def test_manual_job_id_round_trip(self):
+        manual_job_id = build_manual_job_id("test_job_id", "mocked_uuid_str")
+        assert manual_job_id.startswith("manual::")
+        assert decode_manual_job_id(manual_job_id) == "test_job_id"
+        assert decode_manual_job_id("test_job_id") is None
     
+    @patch('web.routers.scheduler.scheduler_job_operation_routers.SchedulerLog')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler')
-    def test_scheduler_add_job_exception_handling(self, mock_scheduler):
+    def test_scheduler_add_job_exception_handling(self, mock_scheduler, mock_scheduler_log):
         """测试scheduler.add_job抛出异常时的处理"""
         with patch('web.routers.scheduler.scheduler_job_operation_routers.reqparse') as mock_reqparse:
             mock_parser = Mock()
@@ -260,9 +229,10 @@ class TestSchedulerJobRunRouters(TestBaseWithRollback):
             mock_parser.parse_args.return_value = mock_args
             
             mock_job = Mock()
-            mock_job.func = Mock(__name__='test_function')
+            mock_job.func_ref = Mock(__name__='test_function')
             mock_scheduler.get_job.return_value = mock_job
-            
+            mock_scheduler_log.query.filter.return_value.order_by.return_value.first.return_value = None
+
             # 模拟add_job抛出异常
             mock_scheduler.add_job.side_effect = Exception("Scheduler error")
             
@@ -276,7 +246,7 @@ class TestSchedulerJobRunRouters(TestBaseWithRollback):
                 assert "Scheduler error" in str(e)
 
 
-class TestSchedulerJobOperationIntegration(TestBaseWithRollback):
+class TestSchedulerJobOperationIntegration:
     """集成测试：测试手动任务执行的完整流程"""
     
     def test_manual_job_execution_flow(self):
@@ -317,22 +287,6 @@ class TestSchedulerJobOperationIntegration(TestBaseWithRollback):
         assert manual_job_wrapper != original_task
         assert manual_job_wrapper != another_task
     
-    @patch('web.routers.scheduler.scheduler_job_operation_routers.cache')
-    def test_cache_operation_verification(self, mock_cache):
-        """验证缓存操作的正确性"""
-        # 模拟缓存操作
-        mock_redis = mock_cache.get_redis_client.return_value
-        mock_redis.set.return_value = True
-        mock_redis.get.return_value = "original_job_id"
-        
-        # 测试缓存设置
-        cache_key = f"{webcons.RedisKeyPrefix.DYNAMIC_JOB}test_new_job_id"
-        redis_client = cache.get_redis_client()
-        redis_client.set(cache_key, "original_job_id", ex=3600)
-        
-        # 验证缓存获取
-        retrieved_value = redis_client.get(cache_key)
-        
-        # 在实际环境中，这些操作应该正常工作
-        # 这里主要验证缓存键的格式和操作流程
-        assert cache_key.startswith(webcons.RedisKeyPrefix.DYNAMIC_JOB)
+    def test_manual_job_id_helper_round_trip(self):
+        manual_job_id = build_manual_job_id("original_job_id", "round_trip")
+        assert decode_manual_job_id(manual_job_id) == "original_job_id"

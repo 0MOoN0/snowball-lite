@@ -19,7 +19,7 @@ def test_frontend_runtime_profiles_distinguish_lite_and_dev():
 
     assert "VITE_RUNTIME_PROFILE=lite" in lite_env
     assert "VITE_PROXY_TARGET=http://127.0.0.1:5001" in lite_env
-    assert "VITE_ENABLE_SCHEDULER=false" in lite_env
+    assert "VITE_ENABLE_SCHEDULER=true" in lite_env
     assert "VITE_ENABLE_SYSTEM_TOKEN=false" in lite_env
 
     assert "VITE_RUNTIME_PROFILE=dev" in dev_env
@@ -49,9 +49,9 @@ def test_frontend_runtime_alignment_files_encode_backend_boundaries():
     assert "wsCache.set(appModules.userInfo, liteRuntimeUser)" in runtime_session
     assert "wsCache.set('dynamicRouter', false)" in runtime_session
     assert "bootstrapRuntimeSession()" in main_entry
-    assert "lite 口径下不支持 scheduler 主链路" in scheduler_view
+    assert "当前运行配置未开启 scheduler" in scheduler_view
     assert "lite 口径下不支持系统 token / Redis 相关配置页" in data_setting_view
     assert "pnpm run dev:dev" in frontend_readme
     assert "python -m web.lite_application" in frontend_readme
     assert "lite 前端会直接注入本地会话" in frontend_readme
-    assert "`scheduler` 和 `/system/token` 相关页面会显式降级" in root_readme
+    assert "scheduler 本身默认开启" in root_readme

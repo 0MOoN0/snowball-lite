@@ -6,15 +6,15 @@ from web.common.utils.timezone_util import parse_to_date
 from web.databox.data_box import DataBox
 from web.databox.models.dto.convertible_bond_issuance import ConvertibleBondIssuanceData
 from web.decorator.scheduler_timeout import scheduler_timeout
-from web.models.notice.Notification import Notification, NotificationSchema
+from web.models.notice.Notification import Notification
 from web.models import db
 from web.scheduler.base import scheduler
+from web.scheduler.notification_dispatch import dispatch_notification
 from web.services.notice.builders.cb_subscribe_builder import make_cb_subscribe_content
 from web.services.notice.notification_service import (
     NotificationService,
     notification_service,
 )
-from web.task.actors import NotificationActors
 from web.models.scheduler.scheduler_log import SchedulerLog
 from sqlalchemy import func, or_
 from web.weblogger import logger
@@ -56,18 +56,14 @@ def cb_subscribe_today(start: Union[date, str] = None, end: Union[date, str] = N
                 content=notification_content,
                 title='今日可转债申购提醒',
             )
-            try:
-                mod_logger.info('[cb_subscribe_today] 通过Actor发送通知')
-                NotificationActors.send_notification.send(NotificationSchema().dumps(notification))
-                mod_logger.info('[cb_subscribe_today] Actor发送成功')
-            except Exception:
-                mod_logger.warning('[cb_subscribe_today] Actor发送失败，尝试同步发送')
-                try:
-                    notice_service.send_notification(notification)
+            sent, channel = dispatch_notification(notification)
+            if sent:
+                if channel == "actor":
+                    mod_logger.info('[cb_subscribe_today] Actor发送成功')
+                else:
                     mod_logger.info('[cb_subscribe_today] 同步发送成功')
-                except Exception:
-                    mod_logger.error('[cb_subscribe_today] 同步发送失败', exc_info=True)
-                    pass
+            else:
+                mod_logger.error('[cb_subscribe_today] 通知发送失败')
         else:
             mod_logger.info('[cb_subscribe_today] 今日无可申购项目，跳过通知')
         mod_logger.info('定时任务结束: 可转债申购提醒-今日(08:30)')
@@ -106,18 +102,14 @@ def cb_subscribe_tomorrow(start: Union[date, str] = None, end: Union[date, str] 
                 content=notification_content,
                 title='明日可转债申购提醒',
             )
-            try:
-                mod_logger.info('[cb_subscribe_tomorrow] 通过Actor发送通知')
-                NotificationActors.send_notification.send(NotificationSchema().dumps(notification))
-                mod_logger.info('[cb_subscribe_tomorrow] Actor发送成功')
-            except Exception:
-                mod_logger.warning('[cb_subscribe_tomorrow] Actor发送失败，尝试同步发送')
-                try:
-                    notice_service.send_notification(notification)
+            sent, channel = dispatch_notification(notification)
+            if sent:
+                if channel == "actor":
+                    mod_logger.info('[cb_subscribe_tomorrow] Actor发送成功')
+                else:
                     mod_logger.info('[cb_subscribe_tomorrow] 同步发送成功')
-                except Exception:
-                    mod_logger.error('[cb_subscribe_tomorrow] 同步发送失败', exc_info=True)
-                    pass
+            else:
+                mod_logger.error('[cb_subscribe_tomorrow] 通知发送失败')
         else:
             mod_logger.info('[cb_subscribe_tomorrow] 明日无可申购项目，跳过通知')
         mod_logger.info('定时任务结束: 可转债申购提醒-明日(20:00)')
@@ -260,17 +252,12 @@ def daily_report(start: Union[date, str] = None, end: Union[date, str] = None):
             content=content,
             title='系统每日报告'
         )
-
-        try:
-            mod_logger.info('[daily_report] 通过Actor发送日报通知')
-            NotificationActors.send_notification.send(NotificationSchema().dumps(notification))
-            mod_logger.info('[daily_report] Actor发送成功')
-        except Exception:
-            mod_logger.warning('[daily_report] Actor发送失败，尝试同步发送')
-            try:
-                notice_service.send_notification(notification)
+        sent, channel = dispatch_notification(notification)
+        if sent:
+            if channel == "actor":
+                mod_logger.info('[daily_report] Actor发送成功')
+            else:
                 mod_logger.info('[daily_report] 同步发送成功')
-            except Exception:
-                mod_logger.error('[daily_report] 同步发送失败', exc_info=True)
-                pass
+        else:
+            mod_logger.error('[daily_report] 通知发送失败')
         mod_logger.info('定时任务结束: 系统每日报告(20:00)')

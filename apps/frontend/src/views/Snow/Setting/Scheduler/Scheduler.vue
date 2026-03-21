@@ -91,7 +91,7 @@
   </ContentWrap>
   <ContentWrap v-else title="任务列表" class="mt-5">
     <el-alert
-      title="lite 口径下不支持 scheduler 主链路"
+      title="当前运行配置未开启 scheduler"
       type="warning"
       :closable="false"
       show-icon

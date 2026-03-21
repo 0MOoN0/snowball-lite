@@ -16,6 +16,7 @@ from web.common.cons import webcons
 from web.models import db
 from web.models.scheduler.scheduler_log import SchedulerLog
 from web.scheduler.base import init_jobstores, resolve_jobstore_config, scheduler
+from web.scheduler.manual_job_id import decode_manual_job_id
 from web.weblogger import debug, error, info, warning
 
 # 导入所有scheduler模块以注册定时任务
@@ -120,6 +121,10 @@ def _make_run_key(job_id: str | None, scheduled_run_time) -> str:
 
 def _resolve_job_id(event: JobSubmissionEvent | JobExecutionEvent) -> str:
     """与 save_logs 保持一致的 job_id 解析（动态任务映射支持）。"""
+    manual_job_id = decode_manual_job_id(getattr(event, "job_id", ""))
+    if manual_job_id is not None:
+        return manual_job_id
+
     mapped = None
     redis_client = _get_cache_client_or_none()
     if redis_client is not None:
@@ -604,14 +609,7 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
             无返回值。
 
         """
-        # 尝试从缓存中获取job_id
-        redis_client = _get_cache_client_or_none()
-        job_id = None
-        if redis_client is not None:
-            job_id = redis_client.get(
-                webcons.RedisKeyPrefix.DYNAMIC_JOB + execution_event.job_id
-            )
-        job_id = job_id if job_id is not None else execution_event.job_id
+        job_id = _resolve_job_id(execution_event)
         # 记录日志
         scheduler_log: SchedulerLog = SchedulerLog()
         scheduler_log.job_id = job_id

@@ -74,7 +74,7 @@ pnpm run serve:pro
 - lite 口径（`.env.lite`）：
   - `VITE_RUNTIME_PROFILE=lite`
   - `VITE_PROXY_TARGET=http://127.0.0.1:5001`
-  - `VITE_ENABLE_SCHEDULER=false`
+  - `VITE_ENABLE_SCHEDULER=true`
   - `VITE_ENABLE_SYSTEM_TOKEN=false`
 - 开发环境（`.env.dev`）：
   - `VITE_RUNTIME_PROFILE=dev`
@@ -127,8 +127,9 @@ server: {
 ## lite / dev 边界
 
 - lite 前端会直接注入本地会话，只为绕开当前仓库缺失的 `/user/login`、`/role/list` 等 auth 接口，不代表后端已经补齐登录能力
-- lite 下优先验证：系统设置、资产列表、记录列表、指数列表、grid / grid-type 分析结果、通知列表这类读链路
-- lite 下显式不支持：scheduler 页面、系统 token / Redis 相关配置页
+- lite 下优先验证：系统设置、资产列表、记录列表、指数列表、grid / grid-type 分析结果、通知列表、scheduler 任务列表这类读链路
+- lite 下默认把 scheduler 页面当成主链路；如果需要临时关闭后端 scheduler，可以显式设置 `LITE_ENABLE_SCHEDULER=false`
+- lite 下显式不支持：系统 token / Redis 相关配置页
 - 如果要验证旧 dev 环境，再切 `pnpm run dev:dev`，不要把 lite 与 dev 混成一套口径
 
 ### 部署说明
@@ -177,8 +178,8 @@ src/
   - `vite preview` 不带代理，请使用开发模式或接后端服务一起调试。
 - 包管理器选择？
   - 这份工作区只走 `pnpm`。
-- 为什么 lite 默认不开放 scheduler 和系统 token？
-  - 当前 lite 后端默认关闭 `ENABLE_SCHEDULER`、`ENABLE_REDIS`，这些页面会显式降级，不再假装可用。
+- 为什么 lite 默认只开放 scheduler，不开放系统 token？
+  - 当前 lite 后端默认开启 `ENABLE_SCHEDULER`，但仍默认关闭 `ENABLE_REDIS`，系统 token 相关页面还是会显式降级，不再假装可用。
 
 ## 变更日志与许可证
 

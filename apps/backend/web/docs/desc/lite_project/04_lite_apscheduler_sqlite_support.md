@@ -8,13 +8,14 @@
 - 对应评审：
   - `round-01-review.md`
   - `round-02-review.md`
-- 关键边界：lite 默认仍关闭 scheduler，不把它纳入 lite 主线默认保证范围
+- 关键边界：这份文档记录的是“lite 默认仍关闭 scheduler、只支持显式开启”的那个阶段
+- 后续更新：当前默认口径已经切到“lite 默认开启 scheduler”，见 [07_lite_scheduler_integration_strategy.md](07_lite_scheduler_integration_strategy.md)
 
 ## 结论
 
-- lite 现在支持显式开启的 APScheduler + SQLite 路径。
-- 默认行为不变，`SNOW_APP_STATUS=lite` 下仍然默认关闭 scheduler。
-- lite 支持两种显式模式：
+- 在这个阶段，lite 开始支持显式开启的 APScheduler + SQLite 路径。
+- 在这个阶段，`SNOW_APP_STATUS=lite` 下仍然默认关闭 scheduler。
+- 在这个阶段，lite 支持两种显式模式：
   - 内存模式：只解决“能调度”，不保留重启后的 job
   - 持久化模式：使用独立 SQLite 文件保存 APScheduler jobstore
 
@@ -41,19 +42,19 @@
 
 ## 启动契约
 
-### 默认模式
+### 默认模式（阶段事实）
 
 - `LITE_ENABLE_SCHEDULER=false`
 - 跳过 scheduler 初始化
 - 跳过 scheduler 路由注册
 
-### lite 内存模式
+### lite 内存模式（阶段事实）
 
 - `LITE_ENABLE_SCHEDULER=true`
 - `LITE_ENABLE_PERSISTENT_JOBSTORE=false`
 - 启动 scheduler，使用默认 `MemoryJobStore`
 
-### lite 持久化模式
+### lite 持久化模式（阶段事实）
 
 - `LITE_ENABLE_SCHEDULER=true`
 - `LITE_ENABLE_PERSISTENT_JOBSTORE=true`
@@ -78,7 +79,7 @@
 
 新增和回归验证覆盖了这些点：
 
-1. lite 默认模式下，scheduler 不初始化，也不注册相关路由
+1. 在该阶段的默认模式下，scheduler 不初始化，也不注册相关路由
 2. lite 内存模式下，scheduler 可以启动，且不依赖 `SCHEDULER_JOBSTORES`
 3. lite 持久化模式下，独立 SQLite jobstore 可在空库首次启动并自动建表
 4. `LITE_SCHEDULER_DB_PATH == LITE_DB_PATH` 时启动直接失败
@@ -115,6 +116,6 @@
 
 ## 保留边界
 
-- 这次完成的是 lite 下“显式开启”的 APScheduler 支持路径，不等于 scheduler 已进入 lite 默认主线保证范围。
+- 这次完成的是 lite 下“显式开启”的 APScheduler 支持路径；后续版本已经在新任务里把 scheduler 升格成 lite 默认主链路。
 - `dev/stg/test` 现有 MySQL 口径和历史兼容路径没有被改成 SQLite。
 - 测试隔离仍然依赖 APScheduler 私有 `_listeners` 结构；如果上游库内部实现变化，这部分测试清理逻辑可能需要跟着调整。

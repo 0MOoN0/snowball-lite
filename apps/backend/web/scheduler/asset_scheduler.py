@@ -16,14 +16,14 @@ from web.models.asset.AssetHoldingData import AssetHoldingDataDTO
 from web.models.grid.Grid import Grid
 from web.models.grid.GridType import GridType
 from web.models.grid.GridTypeDetail import GridTypeDetail
-from web.models.notice.Notification import Notification, NotificationSchema
+from web.models.notice.Notification import Notification
 from web.models.record.record import Record
 from web.scheduler.base import scheduler
+from web.scheduler.notification_dispatch import dispatch_notification
 from web.services.analysis.transaction_analysis_service import GridStrategyTransactionAnalysisService, \
     GridTypeTransactionAnalysisService, TradeAnalysisService
 from web.services.grid.grid_service import GridService
 from web.services.notice.notification_service import notification_service, NotificationService
-from web.task.actors import NotificationActors
 from web.weblogger import error, logger, info
 
 
@@ -970,9 +970,14 @@ def _make_grid_monitor_notification(grid_type_info_list: List[Dict]):
             notice_type=Notification.get_notice_type_enum().CONFIRM_MESSAGE.value,
             content=notification_content,
             title='网格交易确认通知')
-            
-        # 通过网络发送通知
-        NotificationActors.send_notification.send(NotificationSchema().dumps(notification))
-        logger.info('网格交易确认通知发送成功')
+
+        sent, channel = dispatch_notification(notification)
+        if sent:
+            if channel == "actor":
+                logger.info('网格交易确认通知发送成功')
+            else:
+                logger.info('网格交易确认通知同步发送成功')
+        else:
+            logger.error('网格交易确认通知发送失败')
     except Exception as e:
         logger.exception(f'发送网格交易确认通知异常: {str(e)}')

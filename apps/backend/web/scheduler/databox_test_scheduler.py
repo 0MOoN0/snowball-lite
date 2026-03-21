@@ -3,9 +3,9 @@ from datetime import datetime
 
 from web.databox import databox
 from web.models import db
-from web.models.notice.Notification import Notification, NotificationSchema
+from web.models.notice.Notification import Notification
 from web.scheduler.base import scheduler
-from web.task.actors import NotificationActors
+from web.scheduler.notification_dispatch import dispatch_notification
 from web.weblogger import error, info
 
 
@@ -23,7 +23,7 @@ def test_databox_get_rt():
     执行时间：每天下午4点
     功能：使用固定代码测试 DataBox 的实时数据获取（与 daily_report 保持一致）
     固定代码：SZ162411（国泰中证全指证券公司ETF）
-    失败处理：如果测试失败，构建消息型通知并通过 actors 发送
+    失败处理：如果测试失败，构建消息型通知并走通知发送出口
     """
     with scheduler.app.app_context():
         info("开始执行 DataBox get_rt 功能测试任务")
@@ -77,11 +77,15 @@ def _send_test_failure_notification(error_message: str):
         db.session.add(notification)
         db.session.commit()
 
-        # 通过actors发送通知
-        notification_json = NotificationSchema().dumps(notification)
-        NotificationActors.send_notification.send(notification_json)
-
-        info(f"已发送DataBox测试失败通知，通知ID: {notification.id}")
+        # 通知发送失败时也不能影响整个 scheduler 任务
+        sent, channel = dispatch_notification(notification)
+        if sent:
+            if channel == "actor":
+                info(f"已通过Actor发送DataBox测试失败通知，通知ID: {notification.id}")
+            else:
+                info(f"已通过同步方式发送DataBox测试失败通知，通知ID: {notification.id}")
+        else:
+            error(f"DataBox测试失败通知发送失败，通知ID: {notification.id}")
 
     except Exception as e:
         error(f"发送测试失败通知时发生异常: {str(e)}", exc_info=True)

@@ -3,13 +3,14 @@ from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
 import uuid
 
-from web.webtest.test_base import TestBaseWithRollback
 from web.common.cache import cache
 from web.common.cons import webcons
 from web.models.scheduler.scheduler_log import SchedulerLog
+from web.scheduler import _resolve_job_id
+from web.scheduler.manual_job_id import build_manual_job_id, decode_manual_job_id
 
 
-class TestSchedulerComponents(TestBaseWithRollback):
+class TestSchedulerComponents:
     """测试调度器相关组件"""
     
     def setup_method(self):
@@ -88,6 +89,33 @@ class TestSchedulerComponents(TestBaseWithRollback):
         
         # 验证返回值
         assert retrieved_value == self.test_job_id
+
+    def test_manual_job_id_round_trip(self):
+        """测试手动 job id 的编码和解码"""
+        manual_job_id = build_manual_job_id(self.test_job_id, "manual-run")
+
+        assert manual_job_id.startswith("manual::")
+        assert decode_manual_job_id(manual_job_id) == self.test_job_id
+        assert decode_manual_job_id(self.test_job_id) is None
+
+    def test_resolve_job_id_prefers_manual_job_id(self):
+        """测试 listener 优先解析新手动 job id"""
+        manual_job_id = build_manual_job_id(self.test_job_id, "manual-run")
+        event = Mock(job_id=manual_job_id)
+
+        assert _resolve_job_id(event) == self.test_job_id
+
+    @patch('web.scheduler._get_cache_client_or_none')
+    def test_resolve_job_id_falls_back_to_legacy_redis_mapping(self, mock_get_cache_client_or_none):
+        """测试 listener 仍兼容旧 Redis 映射"""
+        redis_client = Mock()
+        redis_client.get.return_value = self.test_job_id
+        mock_get_cache_client_or_none.return_value = redis_client
+
+        event = Mock(job_id=self.test_new_job_id)
+
+        assert _resolve_job_id(event) == self.test_job_id
+        redis_client.get.assert_called_once_with(f"{webcons.RedisKeyPrefix.DYNAMIC_JOB}{self.test_new_job_id}")
     
     def test_uuid_generation_uniqueness(self):
         """测试UUID生成的唯一性"""
@@ -128,7 +156,7 @@ class TestSchedulerComponents(TestBaseWithRollback):
         assert parsed_time.day == now.day
 
 
-class TestManualJobWrapperIntegration(TestBaseWithRollback):
+class TestManualJobWrapperIntegration:
     """测试手动任务包装函数的集成功能"""
     
     def test_function_isolation_concept(self):

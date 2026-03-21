@@ -37,7 +37,7 @@
 
 - 直接执行 `SHOW TABLES LIKE 'apscheduler_jobs'`
 
-虽然 lite 当前默认关闭 scheduler，但这类写法继续留着，后面只要触发相关路径还是会出问题。
+虽然在这个阶段 lite 还默认关闭 scheduler，但这类写法继续留着，后面只要触发相关路径还是会出问题。
 
 ## 任务范围
 

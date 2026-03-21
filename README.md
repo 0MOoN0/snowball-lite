@@ -23,7 +23,7 @@
 - 默认 lite 口径：`pnpm --dir apps/frontend run dev`，后端先 `cd apps/backend && python -m web.lite_application`，默认对齐 `5001`
 - 历史 dev 口径：`pnpm --dir apps/frontend run dev:dev`，后端先 `cd apps/backend && SNOW_APP_STATUS=dev python -m web.application`，默认对齐 `15000`
 
-前端自己的说明见 `apps/frontend/README.md`。lite 下 `scheduler` 和 `/system/token` 相关页面会显式降级，不按“全量可用”口径说明。
+前端自己的说明见 `apps/frontend/README.md`。lite 下 scheduler 已进入默认主链路，`/system/token` 相关页面仍会显式降级，不按“全量可用”口径说明。
 
 ## 后端工作区
 
@@ -166,7 +166,7 @@ docker-compose up -d
 
 ### Lite 模式
 
-Lite 模式是这个仓库当前的默认验证入口，默认走 SQLite，并跳过 Redis、Dramatiq、APScheduler、flask-profiler。
+Lite 模式是这个仓库当前的默认验证入口，默认走 SQLite，并跳过 Redis、Dramatiq、APScheduler 持久化、flask-profiler；scheduler 本身默认开启，但默认只用内存 jobstore。
 
 ```bash
 export SNOW_APP_STATUS=lite
@@ -179,6 +179,8 @@ uv run --no-dev python -m web.lite_application
 - `apps/backend/web/data/lite_runtime/snowball_lite.db` 是 lite 的 stable/prod 长期业务库默认路径
 - `apps/backend/web/data/lite_runtime/snowball_lite_dev.db` 是 lite 的 dev 长期开发库推荐路径
 - `test` 口径默认使用 pytest 临时路径里的 SQLite 文件，文件名建议带 `pytest-` 前缀
+- `stable/prod` 和 `dev` 如果要启用 scheduler 持久化，`LITE_SCHEDULER_DB_PATH` 也应各自使用独立 SQLite 文件，不要和业务库共用
+- `test` 默认使用内存 jobstore；只有做 scheduler 持久化验证时，才额外启用独立的 pytest 临时 scheduler SQLite 文件
 - `stg` 不建议长期常驻；只在发版前演练或数据检查时，从 stable 复制快照，例如 `apps/backend/web/data/lite_runtime/snowball_lite_stg_YYYYMMDD.db`
 - `LITE_XALPHA_CACHE_BACKEND` 默认是 `sql`
 - `LITE_ENABLE_XALPHA_SQL_CACHE` 默认是 `true`
@@ -186,7 +188,7 @@ uv run --no-dev python -m web.lite_application
 - `LITE_XALPHA_CACHE_DIR` 只在显式切回 `csv` backend 时使用
 - 旧的 `data/lite_xalpha_cache` 不再作为默认路径，也不会为默认 SQLite 模式做迁移；它继续按可丢弃缓存处理
 - Lite 模式只保证最小启动链路，不等同于完整生产能力
-- lite 默认关闭 scheduler；如果只是临时验证，可设置 `LITE_ENABLE_SCHEDULER=true`
+- lite 默认开启 scheduler；如果需要临时关闭，可设置 `LITE_ENABLE_SCHEDULER=false`
 - 如果需要持久化 jobstore，再加 `LITE_ENABLE_PERSISTENT_JOBSTORE=true` 和 `LITE_SCHEDULER_DB_PATH=/absolute/path/to/lite_scheduler.db`
 - `LITE_SCHEDULER_DB_PATH` 不能和 `LITE_DB_PATH` 指向同一个 SQLite 文件
 - 如果后续需要完整验证 scheduler 或异步任务，仍优先用 `dev/stg/test`

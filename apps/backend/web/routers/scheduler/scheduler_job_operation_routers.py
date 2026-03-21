@@ -6,7 +6,6 @@
 @Date    ：2024/10/7 15:19
 """
 
-import uuid
 from datetime import datetime, timedelta
 
 from flask import Blueprint
@@ -19,6 +18,7 @@ from web.common.cons import webcons
 from web.common.utils import R
 from web.models.scheduler.scheduler_log import SchedulerLog
 from web.scheduler.base import scheduler
+from web.scheduler.manual_job_id import build_manual_job_id
 
 scheduler_job_operation_bp = Blueprint(
     "scheduler_job_operation", __name__, url_prefix="/scheduler/job"
@@ -107,10 +107,7 @@ class SchedulerJobRunRouters(Resource):
             < webcons.SchedulerConstants.JOB_RESUBMIT_DELAY
         ):
             return R.fail(msg="存在已经提交的相同任务，无法重新提交")
-        redis = cache.get_redis_client()
-        new_job_id = str(uuid.uuid4())
-        key = webcons.RedisKeyPrefix.DYNAMIC_JOB + new_job_id
-        redis.set(key, job_id, ex=900)
+        new_job_id = build_manual_job_id(job_id)
         scheduler.add_job(
             id=new_job_id,
             func=manual_job_wrapper,

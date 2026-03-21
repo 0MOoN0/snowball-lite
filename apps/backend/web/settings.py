@@ -473,8 +473,8 @@ class LiteConfig(Config):
     """
     轻量模式配置：
     - 默认使用 SQLite
-    - 关闭 Redis / Dramatiq / APScheduler / profiler 等可选基础设施
-    - 保留最小数据库与 API 启动能力，用于 spike 验证
+    - 默认关闭 Redis / Dramatiq / profiler，默认开启 APScheduler 内存模式
+    - 保留最小数据库与 API 启动能力，并把 scheduler 收口成 lite 默认主链路
     """
 
     ENV = "lite"
@@ -500,7 +500,7 @@ class LiteConfig(Config):
 
     ENABLE_REDIS = False
     ENABLE_TASK_QUEUE = False
-    ENABLE_SCHEDULER = False
+    ENABLE_SCHEDULER = True
     ENABLE_PERSISTENT_JOBSTORE = False
     LITE_SCHEDULER_DB_PATH = None
     ENABLE_PROFILER = False

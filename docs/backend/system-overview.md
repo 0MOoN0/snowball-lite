@@ -19,7 +19,7 @@
 | `apps/backend/web/models/` | SQLAlchemy 模型，继续沿用 `__bind_key__` 体系 |
 | `apps/backend/web/services/` | 业务逻辑主落点，新逻辑优先放这里 |
 | `apps/backend/web/routers/` | API 路由层，当前以 Flask-RESTX 为主 |
-| `apps/backend/web/scheduler/` | APScheduler 相关能力，lite 默认关闭 |
+| `apps/backend/web/scheduler/` | APScheduler 相关能力，lite 默认开启，默认内存模式 |
 | `apps/backend/web/task/` | Dramatiq 任务队列相关能力，lite 默认关闭 |
 | `apps/backend/web/webtest/` | Web 层、服务层、模型层和 lite 主线集成验证 |
 | `tests/` | lite 链路、bootstrap、`xalpha` 兼容和仓库级补充测试 |
@@ -30,19 +30,19 @@
 
 1. 加载 `settings.py` 中对应环境的配置。
 2. 初始化数据库模型；数据库失败会直接终止启动。
-3. 按 `ENABLE_*` 开关决定是否初始化 Redis、scheduler、task queue、profiler。
+3. 按 `ENABLE_*` 开关决定是否初始化 Redis、task queue、profiler；scheduler 在 lite 下默认开启，只有显式关闭时才跳过。
 4. 初始化 Flask-RESTX API、路由、异常处理和 `xalpha` 相关设置。
 5. lite 入口额外执行 `bootstrap_lite_database(...)`，确保 SQLite baseline 先就位。
 
-lite 下默认关闭的能力：
+lite 下默认运行开关：
 
 - `ENABLE_REDIS = False`
 - `ENABLE_TASK_QUEUE = False`
-- `ENABLE_SCHEDULER = False`
+- `ENABLE_SCHEDULER = True`
 - `ENABLE_PERSISTENT_JOBSTORE = False`
 - `ENABLE_PROFILER = False`
 
-如果确实要在 lite 下临时打开 scheduler，需要额外设置 `LITE_ENABLE_SCHEDULER=true`；如果还要持久化 JobStore，再加 `LITE_ENABLE_PERSISTENT_JOBSTORE=true` 和独立的 `LITE_SCHEDULER_DB_PATH`。
+如果确实要在 lite 下临时关闭 scheduler，需要额外设置 `LITE_ENABLE_SCHEDULER=false`；如果还要持久化 JobStore，再加 `LITE_ENABLE_PERSISTENT_JOBSTORE=true` 和独立的 `LITE_SCHEDULER_DB_PATH`。
 
 ## API 和代码组织约定
 

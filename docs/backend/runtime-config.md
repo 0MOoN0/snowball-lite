@@ -40,7 +40,7 @@ uv run --no-dev python -m web.lite_application
 | `LITE_XALPHA_CACHE_SQLITE_PATH` | lite 下独立 SQL cache 路径 | 默认落到 `apps/backend/web/data/lite_runtime/lite_xalpha_cache.db`，且不能与 `LITE_DB_PATH` 指向同一文件 |
 | `LITE_XALPHA_CACHE_DIR` | lite 下 `xalpha` CSV 缓存目录 | 只在显式切回 `csv` backend 时使用 |
 | `LITE_FLASK_PORT` | lite 入口监听端口 | 默认 `5001` |
-| `LITE_ENABLE_SCHEDULER` | 是否临时启用 scheduler | 默认关闭 |
+| `LITE_ENABLE_SCHEDULER` | 是否启用 scheduler | 默认开启；可显式关闭 |
 | `LITE_ENABLE_PERSISTENT_JOBSTORE` | 是否启用持久化 JobStore | 默认关闭 |
 | `LITE_SCHEDULER_DB_PATH` | lite scheduler SQLite 路径 | 只有启用持久化 JobStore 时才需要，且不能与 `LITE_DB_PATH` 指向同一文件 |
 
@@ -50,6 +50,8 @@ uv run --no-dev python -m web.lite_application
 - lite 启动前会执行 `bootstrap_lite_database(...)`，不要把 `db.create_all()` 当迁移替代方案
 - 旧的 `data/lite_xalpha_cache` 不再作为默认路径，也不会为默认 SQLite 模式做迁移；它继续按可丢弃缓存处理
 - test 口径默认应使用 pytest 临时路径里的 SQLite 文件，不要直接指向 stable/prod 或 dev 长期库
+- `stable/prod` 和 `dev` 如果启用 scheduler 持久化，业务库和 `LITE_SCHEDULER_DB_PATH` 应各自独立
+- test 口径默认用内存 jobstore；只有做 scheduler 持久化验证时，才额外提供独立的 pytest 临时 `LITE_SCHEDULER_DB_PATH`
 
 ## 历史多环境变量
 
@@ -67,7 +69,8 @@ lite 之外，仓库仍保留传统环境配置：
 ## 通用注意事项
 
 - 数据库密码里如果有 `@`、`%`、`/` 之类特殊字符，配置层会做 `quote_plus(...)` 编码，不需要手动转义
-- lite 如果临时启用 scheduler 但不启用持久化 JobStore，调度器会退回内存模式
+- lite scheduler 默认跑内存模式；如果需要持久化 JobStore，再额外打开 `LITE_ENABLE_PERSISTENT_JOBSTORE=true`
+- 持久化 scheduler 一律不要和业务库共用同一个 SQLite 文件；test 里也一样，只是路径应该落在 pytest 临时目录
 - lite 下明确不支持或默认跳过的能力，要按开关理解，不要按“和传统环境完全等价”理解
 - 完整变量清单和默认值以 `apps/backend/web/settings.py` 为准
 

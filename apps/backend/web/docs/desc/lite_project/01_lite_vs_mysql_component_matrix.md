@@ -4,11 +4,12 @@
 >
 > 当前长期版本见 [docs/backend/lite-mysql-matrix.md](../../../../../../docs/backend/lite-mysql-matrix.md)。
 > 这份文档保留阶段对照记录，后续正式维护以根目录 `docs/` 下的长期文档为准。
+> 其中 scheduler 默认值已经在后续任务里调整；当前 scheduler 口径以 `docs/backend/lite-mysql-matrix.md` 和 [07_lite_scheduler_integration_strategy.md](07_lite_scheduler_integration_strategy.md) 为准。
 
 ## 结论先看
 
 - lite 主线不是只把数据库从 MySQL 换成 SQLite。
-- lite 真正做的是把一批重运行时组件从“默认必须有”改成“默认关闭”或“明确不支持”。
+- 在这个阶段里，lite 真正做的是把一批重运行时组件从“默认必须有”改成“默认关闭”或“明确不支持”。
 - 当前 lite 主线保留的是本地单机、弱依赖下的核心业务链路，不承诺覆盖传统多环境部署的整套运行前提。
 
 ## 组件对照表
@@ -20,9 +21,9 @@
 | Redis 缓存 | 默认启用 | 默认关闭 | `LiteConfig.ENABLE_REDIS = False`，启动时直接跳过缓存初始化 |
 | Dramatiq 异步任务队列 | 默认启用，Broker 依赖 Redis | 默认关闭 | `LiteConfig.ENABLE_TASK_QUEUE = False`，不启动异步任务队列 |
 | Dramatiq 常驻 worker | 默认需要 | 不属于 lite 主线 | 代码还在仓库里，但不是 lite 默认运行前提 |
-| APScheduler 调度器 | 默认启用 | 默认关闭 | `LiteConfig.ENABLE_SCHEDULER = False`，启动时跳过调度器初始化 |
+| APScheduler 调度器 | 默认启用 | 当时默认关闭 | 当时 `LiteConfig.ENABLE_SCHEDULER = False`，启动时跳过调度器初始化 |
 | APScheduler 持久化 JobStore | 默认启用，使用 SQLAlchemy JobStore | 默认关闭 | lite 不保证持久化 scheduler 能力 |
-| scheduler 相关路由 | 会注册 | 不注册 | `web/routers/__init__.py` 里按 `ENABLE_SCHEDULER` 控制 |
+| scheduler 相关路由 | 会注册 | 当时不注册 | `web/routers/__init__.py` 里按 `ENABLE_SCHEDULER` 控制 |
 | flask-profiler | 可启用，带独立 profiler 存储 | 默认关闭 | `LiteConfig.ENABLE_PROFILER = False` |
 | xalpha SQL 缓存 | 默认走 SQL 缓存库 | 改成目录型 `csv` 缓存 | lite 不再把 `snowball_data` 这类 SQL 缓存库当主线前提 |
 | databox 启动期初始化 | 缓存可用时初始化 | 默认跳过启动期初始化 | 因为 lite 默认不开 Redis，启动时会跳过 `databox.init_app(app)` |

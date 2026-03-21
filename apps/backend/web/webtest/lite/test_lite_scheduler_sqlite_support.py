@@ -51,7 +51,21 @@ def reset_scheduler_runtime():
     _cleanup_scheduler_singleton()
 
 
-def test_lite_scheduler_disabled_by_default_skips_runtime_and_routes(lite_runtime_paths):
+def test_lite_scheduler_enabled_by_default_starts_runtime_and_routes(lite_runtime_paths):
+    app = create_app("lite")
+
+    try:
+        assert app.config["ENABLE_SCHEDULER"] is True
+        assert app.config["ENABLE_PERSISTENT_JOBSTORE"] is False
+        assert app.config["SCHEDULER_AVAILABLE"] is True
+        assert "/scheduler" in _scheduler_routes(app)
+    finally:
+        _dispose_app(app)
+
+
+def test_lite_scheduler_can_be_disabled_explicitly(lite_runtime_paths, monkeypatch):
+    monkeypatch.setenv("LITE_ENABLE_SCHEDULER", "false")
+
     app = create_app("lite")
 
     try:
