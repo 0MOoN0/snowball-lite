@@ -1,7 +1,7 @@
 # Task 03 前端与当前后端运行口径对齐 状态
 
-- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/03_frontend_backend_runtime_alignment_design.md`
-- 所属 requirement：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition`
+- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/03_frontend_backend_runtime_alignment_design.md`
+- 所属 requirement：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition`
 - 当前状态：已完成
 - 当前轮次：round-01
 - 当前结论：已完成 lite/dev 运行口径拆分、lite 本地会话引导和 scheduler/token 显式降级文案；通过 Vite 代理实测打通了 `/system/settings/` 与 `/api/asset/list/`；round-01 正式评审无 finding，但 `build:lite` 仍被前端存量 TypeScript 错误阻塞

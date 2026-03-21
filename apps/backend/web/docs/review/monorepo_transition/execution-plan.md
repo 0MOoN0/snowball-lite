@@ -1,18 +1,18 @@
 # monorepo_transition 执行计划
 
-- 需求入口：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition`
-- 总览文档：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/00_overview.md`
+- 需求入口：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition`
+- 总览文档：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/00_overview.md`
 - 当前模式：requirement
 - 当前状态：Task 01 到 Task 05 已全部完成并通过正式评审
-- 编排结论：按任务文档推荐顺序顺序推进；Task 05 可提前分析，但实现和收口放在 Task 03 之后，Task 04 继续压后
+- 编排结论：实际落地顺序为 Task 01 -> Task 02 -> Task 03 -> Task 05 -> Task 04；下方表格保留原始编排信息，供归档追溯
 
 ## 当前仓库事实
 
-- 根目录还没有 `pnpm-workspace.yaml`
-- 前端仍位于 `/Users/leon/projects/snowball-lite/snow_view`
-- `snow_view/` 仍带有独立仓库痕迹：`.git`、`.github`、`.husky`、`.vscode`、`.cursor`、`.trae`、`node_modules`、`dist-dev`、`dist-pro`
-- 根目录已有后端主工程 `web/`、测试目录 `tests/`、`xalpha/`，以及 `doc/` 旧文档目录
-- 当前 git 状态里 `snow_view/` 是未跟踪目录，适合先在不打散后端代码的前提下完成前端收编
+- 根目录已经建立 `pnpm-workspace.yaml`
+- 前端真实代码已经位于 `/Users/leon/projects/snowball-lite/apps/frontend`
+- 后端真实代码已经位于 `/Users/leon/projects/snowball-lite/apps/backend/web`
+- 根目录 `web` 已保留为兼容符号链接
+- 根目录已有 `docs/` 长期文档入口，`doc/` 继续作为 `xalpha` legacy 文档目录
 
 ## 任务编排
 
@@ -52,3 +52,4 @@
 - 已完成 Task 05 的根 `docs/` 入口与长期文档边界收口
 - Task 04 已按单独任务推进完成，真实后端代码进入 `apps/backend/web/`
 - 根目录 `web` 保留为兼容符号链接，`apps/backend/xalpha` 保持对根目录 `xalpha/` 的兼容导入
+- 本组 requirement 设计文档已统一归档到 `web/docs/desc/monorepo_transition`

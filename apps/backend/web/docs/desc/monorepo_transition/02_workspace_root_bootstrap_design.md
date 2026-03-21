@@ -1,13 +1,24 @@
-# Task 02：根工作区与 apps/frontend 建立
+# Task 02：根工作区与 apps/frontend 建立（归档）
 
 ## 任务状态
 
-- 状态：待开始
+- 状态：已完成
 - 优先级：高
 - 前置：Task 01 已完成
 - 目标：把前端正式放进 monorepo 工作区
+- 最终落点：前端当前已经位于 `apps/frontend/`
 
-## 1. 任务目标
+## 归档结论
+
+- 仓库根目录已经建立 `pnpm-workspace.yaml`
+- 前端已经从 `snow_view/` 迁入 `apps/frontend/`
+- 根目录 `.gitignore` 和 README 已补齐 workspace 口径
+- 这一步收口后，前端不再以嵌套独立仓库方式存在
+- 该任务的正式状态和评审结论见：
+  - `web/docs/review/monorepo_transition/02_workspace_root_bootstrap/task-status.md`
+  - `web/docs/review/monorepo_transition/02_workspace_root_bootstrap/round-02-review.md`
+
+## 1. 原始目标
 
 这一步要完成的是：
 
@@ -15,7 +26,7 @@
 - 把前端从 `snow_view/` 收到 `apps/frontend`
 - 让前端成为主仓正式子项目，而不是临时拷贝目录
 
-## 2. 推荐目标结构
+## 2. 原始目标结构
 
 ```text
 /
@@ -27,7 +38,7 @@
   docs/   # 可先只建空目录，详细收口交给 Task 05
 ```
 
-## 3. 任务范围
+## 3. 原始范围
 
 ### 3.1 要处理的内容
 
@@ -69,7 +80,7 @@
 
 不要在这一步把前端内部 ESLint / Vite / TS 配置都拉到根目录。
 
-## 6. 验收标准
+## 6. 原始验收标准
 
 - `snow_view/` 已不存在
 - 前端已位于 `apps/frontend/`
@@ -77,7 +88,7 @@
 - 根目录忽略规则能覆盖前端依赖和构建产物
 - 前端依赖安装命令可以从 monorepo 口径执行
 
-## 7. 风险点
+## 7. 初始风险点
 
 - 如果这一步顺手动后端，会把问题面扩大
 - 如果把前端内部配置过度上提到根目录，后续前端升级会变难

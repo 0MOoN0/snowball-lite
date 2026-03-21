@@ -1,8 +1,13 @@
 # monorepo_transition 阶段总结
 
-- 需求入口：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition`
+- 需求入口：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition`
 - 当前结论：Task 01 到 Task 05 已全部完成实现与正式评审；当前 monorepo 已形成 `apps/frontend` + `apps/backend/web` 的双工作区结构，根目录 `web` 保留为兼容符号链接，`xalpha/` 继续保留在仓库根目录
 - 当前状态：已完成
+
+## 归档说明
+
+- 本组 requirement 设计文档已从 `web/docs/task/monorepo_transition` 迁到 `web/docs/desc/monorepo_transition`
+- `web/docs/task/` 继续保留给后续活跃任务使用，本次只归档已完成的 `monorepo_transition`
 
 ## 已完成任务
 

@@ -1,7 +1,7 @@
 # Task 01 前端源码收编与仓清洗 状态
 
-- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/01_frontend_source_intake_design.md`
-- 所属 requirement：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition`
+- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/01_frontend_source_intake_design.md`
+- 所属 requirement：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition`
 - 当前状态：已完成
 - 当前轮次：round-01
 - 当前结论：`snow_view/` 已收成前端工作区口径，独立仓库目录、构建垃圾、旧 Docker/nginx/husky/CI 痕迹已清理，`package.json` 已切到 workspace 口径；round-01 正式评审无 finding

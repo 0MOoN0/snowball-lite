@@ -1,10 +1,10 @@
 # monorepo_transition 需求状态
 
-- 需求入口：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition`
-- 总览文档：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/00_overview.md`
+- 需求入口：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition`
+- 总览文档：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/00_overview.md`
 - 当前状态：已完成
 - 当前轮次：requirement-round-01
-- 当前结论：Task 01 到 Task 05 已全部完成实现与正式评审；前端已进入 `apps/frontend/`，后端真实代码已进入 `apps/backend/web/`，根目录 `web` 保留为兼容符号链接；monorepo_transition requirement 已按当前设计文档收口
+- 当前结论：Task 01 到 Task 05 已全部完成实现与正式评审；前端已进入 `apps/frontend/`，后端真实代码已进入 `apps/backend/web/`，根目录 `web` 保留为兼容符号链接；本组 requirement 设计文档已归档到 `web/docs/desc/monorepo_transition`，monorepo_transition requirement 已按当前设计文档收口
 
 ## 已确认范围
 
@@ -43,12 +43,12 @@
 
 - `sed -n '1,420p' /Users/leon/.codex/skills/team-work/SKILL.md`
 - `sed -n '1,260p' /Users/leon/projects/snowball-lite/AGENTS.md`
-- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/00_overview.md`
-- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/01_frontend_source_intake_design.md`
-- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/02_workspace_root_bootstrap_design.md`
-- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/03_frontend_backend_runtime_alignment_design.md`
-- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/04_backend_app_workspace_relocation_design.md`
-- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/05_documentation_root_bootstrap_design.md`
+- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/00_overview.md`
+- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/01_frontend_source_intake_design.md`
+- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/02_workspace_root_bootstrap_design.md`
+- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/03_frontend_backend_runtime_alignment_design.md`
+- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/04_backend_app_workspace_relocation_design.md`
+- `sed -n '1,260p' /Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/05_documentation_root_bootstrap_design.md`
 - `git status --short`
 - `ls -la /Users/leon/projects/snowball-lite`
 - `find /Users/leon/projects/snowball-lite/snow_view -maxdepth 2 \\( -name '.git' -o -name '.github' -o -name '.husky' -o -name 'node_modules' -o -name 'dist-dev' -o -name 'dist-pro' -o -name '.vscode' -o -name '.cursor' -o -name '.trae' \\) | sort`

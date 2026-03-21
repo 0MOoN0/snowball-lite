@@ -1,7 +1,7 @@
 # Task 04 后端应用工作区物理迁移 状态
 
-- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/04_backend_app_workspace_relocation_design.md`
-- 所属 requirement：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition`
+- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/04_backend_app_workspace_relocation_design.md`
+- 所属 requirement：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition`
 - 当前状态：已完成
 - 当前轮次：round-01
 - 当前结论：真实后端代码已迁到 `apps/backend/web/`；根目录 `web` 保留为兼容符号链接；`apps/backend/xalpha` 保留对根目录 `xalpha/` 的兼容入口；后端 README、Docker、docker-compose 和环境变量文档已切到 `apps/backend` 工作区口径；Task 04 定向测试、backend path 回归、Gunicorn 配置检查和 monorepo 定向回归已通过；round-01 正式评审无 finding

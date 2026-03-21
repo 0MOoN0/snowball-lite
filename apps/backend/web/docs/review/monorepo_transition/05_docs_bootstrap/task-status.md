@@ -1,7 +1,7 @@
 # Task 05 根目录 docs 建立与长期文档收口 状态
 
-- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/05_documentation_root_bootstrap_design.md`
-- 所属 requirement：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition`
+- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/05_documentation_root_bootstrap_design.md`
+- 所属 requirement：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition`
 - 当前状态：已完成
 - 当前轮次：round-01
 - 当前结论：已完成根目录 `docs/` 入口、分区说明和 README 文档入口更新；`web/docs/task`、`web/docs/review` 和 `doc/` 的边界保持不变；独立 reviewer 的 round-02 评审无 finding

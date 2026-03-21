@@ -11,6 +11,7 @@
 - 这是 `snowball-lite`，不是原始 `snowball` 主线仓库。
 - 默认分支是 `main`，不要再按旧的 `master/dev` 语义理解项目流程。
 - 当前主方向是 lite 轻量化收敛，不是完整生产能力补齐。
+- `monorepo_transition` 已完成，当前目录口径以 `apps/frontend/` + `apps/backend/web/` 为准，根目录 `web/` 只是兼容符号链接。
 - lite 已完成阶段 1 到阶段 3，阶段 4 还没开始。
 - 当前能说“lite 的 SQLite 可信度已经明显提升”，不能说“全仓库已经完成 SQLite 迁移”。
 
@@ -19,6 +20,7 @@
 - `README.md`
 - `web/docs/轻量版分支改造方案.md`
 - `web/docs/desc/lite_project/00_repo_baseline.md`
+- `web/docs/desc/monorepo_transition/00_overview.md`
 - `web/docs/task/lite_stage4/`
 
 ## 2. 默认工作口径
@@ -42,15 +44,18 @@
 
 ## 3. 关键目录
 
-- `web/`：Flask 主应用，包含模型、路由、服务、调度、任务、模板和项目文档。
+- `apps/backend/web/`：后端真实目录，包含模型、路由、服务、调度、任务、模板、迁移和项目文档。
+- `web/`：指向 `apps/backend/web/` 的兼容符号链接；读旧代码和旧文档时会继续看到这个路径。
+- `apps/frontend/`：前端工作区。
 - `xalpha/`：独立能力层和兼容适配代码。
 - `tests/`：lite 运行链路、bootstrap、兼容验证。
-- `web/webtest/`：Web 层、服务层、模型层、路由层集成测试。
-- `migrations_snowball_lite/`：lite 的 SQLite 迁移基线。
-- `migrations_snowball_dev/`、`migrations_snowball_stg/`、`migrations_snowball_test/`：历史多环境迁移目录。
+- `apps/backend/web/webtest/`：Web 层、服务层、模型层、路由层集成测试。
+- `apps/backend/web/migrations/lite/`：lite 的 SQLite 迁移基线。
+- `apps/backend/web/migrations/dev/`、`apps/backend/web/migrations/stg/`、`apps/backend/web/migrations/test/`：历史多环境迁移目录。
+- `docs/`：仓库级长期文档入口。
 - `web/docs/desc/`：阶段归档和结论文档。
 - `web/docs/task/`：当前阶段任务文档。
-- `docs/review/`：评审、审查、阶段状态记录。
+- `web/docs/review/`：评审、审查、阶段状态记录。
 
 没有明确任务时，不要改这些协作目录：
 
@@ -61,7 +66,7 @@
 
 ## 4. 代码收敛方向
 
-- 新增业务逻辑优先放 `web/services/`，不要继续往 router 里堆。
+- 新增业务逻辑优先放 `apps/backend/web/services/`，不要继续往 router 里堆。
 - 新增接口优先沿用 Flask-RESTX `Namespace` + Marshmallow `Schema`。
 - 仓库里还有旧的 Blueprint / Flask-RESTful / `reqparse` 写法；兼容改老代码可以，但不要给新功能继续扩这种写法。
 - 接口响应继续沿用 `R.ok(...)`、`R.fail(...)`、`R.paginate(...)`。
@@ -73,25 +78,26 @@
 - 能用 SQLAlchemy 表达式就不要手写方言 SQL。
 - 必须分方言处理时，要把 SQLite 和 MySQL 分支都写清楚。
 - 模型仍按现有 `__bind_key__` 体系工作，不要随意改绑库方式。
-- 影响 lite schema 的改动，要评估 `migrations_snowball_lite/` 是否需要同步。
-- 影响 dev/stg/test 传统环境的改动，也要评估对应迁移目录是否需要同步。
-- lite 主线的 schema 演进优先走 `migrations_snowball_lite/` 和 `bootstrap_lite_database(...)`，不要把 `db.create_all()` 当迁移替代方案。
+- 影响 lite schema 的改动，要评估 `apps/backend/web/migrations/lite/` 是否需要同步。
+- 影响 dev/stg/test 传统环境的改动，也要评估 `apps/backend/web/migrations/dev/`、`apps/backend/web/migrations/stg/`、`apps/backend/web/migrations/test/` 是否需要同步。
+- lite 主线的 schema 演进优先走 `apps/backend/web/migrations/lite/` 和 `bootstrap_lite_database(...)`，不要把 `db.create_all()` 当迁移替代方案。
 - 触及 Redis、scheduler、task queue、profiler 的代码时，先看 `ENABLE_*` 开关。
 - lite 下明确不支持的能力，要在代码分支和文档里写清楚。
 
 ## 6. 测试与文档落点
 
 - lite 运行链路、bootstrap、xalpha 兼容优先看 `tests/`。
-- Flask 接口、服务、模型集成优先看 `web/webtest/`。
+- Flask 接口、服务、模型集成优先看 `apps/backend/web/webtest/`。
 - lite 主线路径新增能力，优先补 SQLite 下可重复执行的测试。
-- 牵涉 migration、lite bootstrap、阶段性结论时，优先补 `test_lite_*` 或 `web/webtest/stage3/` 风格验证。
+- 牵涉 migration、lite bootstrap、阶段性结论时，优先补 `test_lite_*` 或 `apps/backend/web/webtest/` 下的对应验证。
 
 文档直接复用现有落点：
 
 - 入口和使用说明：`README.md`
+- 仓库级长期文档：`docs/`
 - 阶段归档、结论、设计说明：`web/docs/desc/`
 - 当前阶段任务：`web/docs/task/`
-- 评审、复盘、阶段状态：`docs/review/`
+- 评审、复盘、阶段状态：`web/docs/review/`
 
 ## 7. Git 与规则冲突
 

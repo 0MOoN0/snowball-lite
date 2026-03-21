@@ -1,18 +1,28 @@
-# Task 01：前端源码收编与仓清洗
+# Task 01：前端源码收编与仓清洗（归档）
 
 ## 任务状态
 
-- 状态：待开始
+- 状态：已完成
 - 优先级：高
 - 目标：把当前 `snow_view/` 从“完整独立仓库副本”收成“可纳入主仓的前端源码工作区”
+- 最终落点：该任务的产物已经在 Task 02 中并入 `apps/frontend/`
 
-## 1. 任务目标
+## 归档结论
+
+- `snow_view/` 中的 `.git`、`.github`、`.husky`、`.vscode`、`.cursor`、`.trae`、`node_modules`、`dist-dev`、`dist-pro` 等独立仓库残留已清理
+- 前端包配置已经切到适合 monorepo workspace 的口径
+- 这一步只负责“收干净再迁”，实际目录迁移由 Task 02 完成
+- 该任务的正式状态和评审结论见：
+  - `web/docs/review/monorepo_transition/01_frontend_source_intake/task-status.md`
+  - `web/docs/review/monorepo_transition/01_frontend_source_intake/round-01-review.md`
+
+## 1. 原始目标
 
 这一步只解决一件事：
 
 - 让 `snow_view/` 变成干净、可迁移、可进入 monorepo 的前端源码目录
 
-## 2. 当前问题
+## 2. 初始问题
 
 当前 `snow_view/` 里还带着独立仓库痕迹，包括但不限于：
 
@@ -31,7 +41,7 @@
 - 大量无效构建产物进工作区
 - 前端仓和主仓边界混乱
 
-## 3. 任务范围
+## 3. 原始范围
 
 ### 3.1 要处理的内容
 
@@ -94,7 +104,7 @@
 - `.env.example`
 - `.env.local` 风格忽略文件
 
-## 6. 验收标准
+## 6. 原始验收标准
 
 - `snow_view/` 下不再包含 `.git`
 - 不再包含 `node_modules` 和 `dist-*`
@@ -102,7 +112,7 @@
 - 前端源码和构建配置完整保留
 - `package.json` 已调整为适合主仓工作区使用
 
-## 7. 风险点
+## 7. 初始风险点
 
 - 如果直接带着 `.git` 进入主仓，后续所有 git 行为都会混乱
 - 如果保留 `node_modules` 和 `dist-*`，工作区会被构建垃圾淹没

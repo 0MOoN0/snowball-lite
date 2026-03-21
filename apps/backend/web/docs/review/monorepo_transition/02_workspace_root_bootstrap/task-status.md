@@ -1,7 +1,7 @@
 # Task 02 根工作区与 apps/frontend 建立 状态
 
-- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/02_workspace_root_bootstrap_design.md`
-- 所属 requirement：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition`
+- 原任务文档：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition/02_workspace_root_bootstrap_design.md`
+- 所属 requirement：`/Users/leon/projects/snowball-lite/web/docs/desc/monorepo_transition`
 - 当前状态：已完成
 - 当前轮次：round-01
 - 当前结论：前端已搬到 `apps/frontend/`，根工作区、忽略规则、lockfile 和根级入口说明已完成；独立 reviewer 的 round-02 评审无 finding
