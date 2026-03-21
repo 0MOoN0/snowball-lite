@@ -3,7 +3,7 @@
 - 需求入口：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition`
 - 总览文档：`/Users/leon/projects/snowball-lite/web/docs/task/monorepo_transition/00_overview.md`
 - 当前模式：requirement
-- 当前状态：Task 01、Task 02、Task 03、Task 05 已完成并通过正式评审，Task 04 待启动
+- 当前状态：Task 01 到 Task 05 已全部完成并通过正式评审
 - 编排结论：按任务文档推荐顺序顺序推进；Task 05 可提前分析，但实现和收口放在 Task 03 之后，Task 04 继续压后
 
 ## 当前仓库事实
@@ -43,12 +43,12 @@
 2. Task 02：根工作区与 `apps/frontend` 建立，已完成
 3. Task 03：前端与当前后端运行口径对齐，已完成
 4. Task 05：根目录 `docs/` 建立与长期文档收口，已完成
-5. Task 04：后端应用工作区物理迁移，待执行
+5. Task 04：后端应用工作区物理迁移，已完成
 
 ## 当前决定
 
 - 已按最小可验证改动完成 Task 01，不提前挪后端目录
 - 已在 Task 02 建立 `apps/frontend` workspace，并完成 Task 03 的 lite/dev 运行链路对齐
 - 已完成 Task 05 的根 `docs/` 入口与长期文档边界收口
-- Task 04 仍按单独任务推进，不与其他任务并行
-- Task 04 当前的关键决策点是迁移时是否保留根路径兼容层
+- Task 04 已按单独任务推进完成，真实后端代码进入 `apps/backend/web/`
+- 根目录 `web` 保留为兼容符号链接，`apps/backend/xalpha` 保持对根目录 `xalpha/` 的兼容导入

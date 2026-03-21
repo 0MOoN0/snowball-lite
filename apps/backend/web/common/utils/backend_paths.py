@@ -8,7 +8,14 @@ def get_backend_root() -> Path:
 
 
 def get_repo_root() -> Path:
-    return get_backend_root().parent
+    backend_root = get_backend_root()
+    backend_workspace_root = backend_root.parent
+    apps_root = backend_workspace_root.parent
+
+    if backend_workspace_root.name == "backend" and apps_root.name == "apps":
+        return apps_root.parent
+
+    return backend_workspace_root.parent
 
 
 def get_legacy_repo_data_root() -> Path:
