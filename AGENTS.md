@@ -11,17 +11,17 @@
 - 这是 `snowball-lite`，不是原始 `snowball` 主线仓库。
 - 默认分支是 `main`，不要再按旧的 `master/dev` 语义理解项目流程。
 - 当前主方向是 lite 轻量化收敛，不是完整生产能力补齐。
-- `monorepo_transition` 已完成，当前目录口径以 `apps/frontend/` + `apps/backend/web/` 为准，根目录 `web/` 只是兼容符号链接。
+- `monorepo_transition` 已完成，当前目录口径以 `apps/frontend/` + `apps/backend/web/` 为准。
 - lite 已完成阶段 1 到阶段 3，阶段 4 还没开始。
 - 当前能说“lite 的 SQLite 可信度已经明显提升”，不能说“全仓库已经完成 SQLite 迁移”。
 
 项目定位和阶段状态以这些文档为准：
 
 - `README.md`
-- `web/docs/轻量版分支改造方案.md`
-- `web/docs/desc/lite_project/00_repo_baseline.md`
-- `web/docs/desc/monorepo_transition/00_overview.md`
-- `web/docs/task/lite_stage4/`
+- `apps/backend/web/docs/轻量版分支改造方案.md`
+- `apps/backend/web/docs/desc/lite_project/00_repo_baseline.md`
+- `apps/backend/web/docs/desc/monorepo_transition/00_overview.md`
+- `apps/backend/web/docs/task/lite_stage4/`
 
 ## 2. 默认工作口径
 
@@ -45,7 +45,6 @@
 ## 3. 关键目录
 
 - `apps/backend/web/`：后端真实目录，包含模型、路由、服务、调度、任务、模板、迁移和项目文档。
-- `web/`：指向 `apps/backend/web/` 的兼容符号链接；读旧代码和旧文档时会继续看到这个路径。
 - `apps/frontend/`：前端工作区。
 - `xalpha/`：独立能力层和兼容适配代码。
 - `tests/`：lite 运行链路、bootstrap、兼容验证。
@@ -53,9 +52,9 @@
 - `apps/backend/web/migrations/lite/`：lite 的 SQLite 迁移基线。
 - `apps/backend/web/migrations/dev/`、`apps/backend/web/migrations/stg/`、`apps/backend/web/migrations/test/`：历史多环境迁移目录。
 - `docs/`：仓库级长期文档入口。
-- `web/docs/desc/`：阶段归档和结论文档。
-- `web/docs/task/`：当前阶段任务文档。
-- `web/docs/review/`：评审、审查、阶段状态记录。
+- `apps/backend/web/docs/desc/`：阶段归档和结论文档。
+- `apps/backend/web/docs/task/`：当前阶段任务文档。
+- `apps/backend/web/docs/review/`：评审、审查、阶段状态记录。
 
 没有明确任务时，不要改这些协作目录：
 
@@ -95,9 +94,9 @@
 
 - 入口和使用说明：`README.md`
 - 仓库级长期文档：`docs/`
-- 阶段归档、结论、设计说明：`web/docs/desc/`
-- 当前阶段任务：`web/docs/task/`
-- 评审、复盘、阶段状态：`web/docs/review/`
+- 阶段归档、结论、设计说明：`apps/backend/web/docs/desc/`
+- 当前阶段任务：`apps/backend/web/docs/task/`
+- 评审、复盘、阶段状态：`apps/backend/web/docs/review/`
 
 ## 7. Git 与规则冲突
 

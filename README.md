@@ -12,7 +12,7 @@
 - 默认分支：`main`
 - 当前目标：继续完成 lite 项目的阶段二验证和收敛
 
-详细说明见 `web/docs/desc/lite_project/00_repo_baseline.md`。
+详细说明见 `apps/backend/web/docs/desc/lite_project/00_repo_baseline.md`。
 
 ## 前端工作区
 
@@ -27,7 +27,7 @@
 
 ## 后端工作区
 
-后端工作区现在从 `apps/backend/` 进入。真实后端代码位于 `apps/backend/web/`，根目录 `web` 只保留兼容入口，`web/docs` 这条路径仍然可以继续访问任务、评审和阶段文档。
+后端工作区现在从 `apps/backend/` 进入。真实后端代码位于 `apps/backend/web/`，常用启动、调试和文档入口都以这个工作区为准。
 
 在仓库根目录执行 `cd apps/backend` 之后，再跑这些命令：
 
@@ -42,14 +42,14 @@
 仓库级长期文档入口见 [docs/README.md](docs/README.md)。
 
 - `[docs/](docs)`：仓库级长期文档
-- `[web/docs/task/](web/docs/task)` 和 `[web/docs/review/](web/docs/review)`：执行文档
-- `[web/docs/desc/](web/docs/desc)`：阶段归档和结论文档
+- `[apps/backend/web/docs/task/](apps/backend/web/docs/task)` 和 `[apps/backend/web/docs/review/](apps/backend/web/docs/review)`：执行文档
+- `[apps/backend/web/docs/desc/](apps/backend/web/docs/desc)`：阶段归档和结论文档
 - `[doc/](doc)`：`xalpha` 旧 Sphinx 文档区
 
 ## 技术栈与架构
 
 - 技术栈：`Flask 2.2`、`SQLAlchemy 1.4`、`APScheduler`、`Redis`、`Jinja2`、`Flask-RESTX 1.3.0`、`Dramatiq`
-- 核心模块：`web/models` | `web/routers` | `web/services` | `web/scheduler` | `web/task` | `web/common`
+- 核心模块：`apps/backend/web/models` | `apps/backend/web/routers` | `apps/backend/web/services` | `apps/backend/web/scheduler` | `apps/backend/web/task` | `apps/backend/web/common`
 - 多数据库：使用 `__bind_key__` 绑定不同库；默认数据源用于数据存放，业务库用于业务实体
 - 日志与规范：统一使用 `web.weblogger`，异常日志统一 `error(msg, exc_info=True)`
 - 文档与约定：API 响应统一为 `{"code": xxx, "success": boolean, "message": "信息", "data": object}`
@@ -133,7 +133,7 @@ cd apps/backend
 uv run --no-dev python -m web.lite_application
 ```
 
-- `web/lite_application.py` 会自动固定 `SNOW_APP_STATUS=lite`
+- `apps/backend/web/lite_application.py` 会自动固定 `SNOW_APP_STATUS=lite`
 - 启动前会自动执行 `bootstrap_lite_database(...)`
 - `--no-dev` 只安装运行应用所需依赖，不把 pytest 这类开发依赖一并拉进来
 - 当前仓库的 `.python-version` 还是旧的 pyenv 虚拟环境名，`uv` 可能会提示一个 warning，但不影响 lite 启动
@@ -153,7 +153,7 @@ docker-compose up -d
 
 - 环境选择：`SNOW_APP_STATUS=dev|stg|test|lite`
 - 开发环境端口：`DEV_FLASK_PORT`（默认 `15000`）
-- 数据库：`DEV_DB_*` / `STG_DB_*`（见 `web/settings.py`）
+- 数据库：`DEV_DB_*` / `STG_DB_*`（见 `apps/backend/web/settings.py`）
 - Redis：`DEV_REDIS_*` / `STG_REDIS_*`
 - RESTX 文档路径：`RESTX_DOC=/docs`
 - APScheduler：`SCHEDULER_API_ENABLED`、`SCHEDULER_TIMEZONE` 等
@@ -169,13 +169,13 @@ cd apps/backend
 uv run --no-dev python -m web.lite_application
 ```
 
-- `LITE_DB_PATH` 不传时，默认写到 `web/data/lite_runtime/snowball_lite.db`
-- `web/data/lite_runtime/snowball_lite.db` 是 lite 的 stable/prod 长期业务库默认路径
-- `web/data/lite_runtime/snowball_lite_dev.db` 是 lite 的 dev 长期开发库推荐路径
+- `LITE_DB_PATH` 不传时，默认写到 `apps/backend/web/data/lite_runtime/snowball_lite.db`
+- `apps/backend/web/data/lite_runtime/snowball_lite.db` 是 lite 的 stable/prod 长期业务库默认路径
+- `apps/backend/web/data/lite_runtime/snowball_lite_dev.db` 是 lite 的 dev 长期开发库推荐路径
 - `test` 口径默认使用 pytest 临时路径里的 SQLite 文件，文件名建议带 `pytest-` 前缀
-- `stg` 不建议长期常驻；只在发版前演练或数据检查时，从 stable 复制快照，例如 `web/data/lite_runtime/snowball_lite_stg_YYYYMMDD.db`
-- `LITE_XALPHA_CACHE_DIR` 不传时，默认写到 `web/data/lite_runtime/lite_xalpha_cache`
-- 如果仓库根目录还留着旧的 `data/*.db` 或 `data/lite_xalpha_cache`，lite 启动时会自动迁到 `web/data/lite_runtime/`
+- `stg` 不建议长期常驻；只在发版前演练或数据检查时，从 stable 复制快照，例如 `apps/backend/web/data/lite_runtime/snowball_lite_stg_YYYYMMDD.db`
+- `LITE_XALPHA_CACHE_DIR` 不传时，默认写到 `apps/backend/web/data/lite_runtime/lite_xalpha_cache`
+- 如果仓库根目录还留着旧的 `data/*.db` 或 `data/lite_xalpha_cache`，lite 启动时会自动迁到 `apps/backend/web/data/lite_runtime/`
 - Lite 模式只保证最小启动链路，不等同于完整生产能力
 - lite 默认关闭 scheduler；如果只是临时验证，可设置 `LITE_ENABLE_SCHEDULER=true`
 - 如果需要持久化 jobstore，再加 `LITE_ENABLE_PERSISTENT_JOBSTORE=true` 和 `LITE_SCHEDULER_DB_PATH=/absolute/path/to/lite_scheduler.db`
@@ -183,16 +183,16 @@ uv run --no-dev python -m web.lite_application
 - 如果后续需要完整验证 scheduler 或异步任务，仍优先用 `dev/stg/test`
 - 如果你本地创建了 `.vscode/launch.json`，可以直接使用 `Snowball Lite` 或 `Snowball Lite (Gunicorn)` 启动项
 
-更多配置说明见 `web/docs/环境变量配置指南.md` 与 `web/settings.py` 注释。
+更多配置说明见 `apps/backend/web/docs/环境变量配置指南.md` 与 `apps/backend/web/settings.py` 注释。
 
 ## 数据库迁移
 
 后端工作区的迁移目录已经收口到 `apps/backend/web/migrations/`：
 
-- `web/migrations/dev/`
-- `web/migrations/stg/`
-- `web/migrations/test/`
-- `web/migrations/lite/`
+- `apps/backend/web/migrations/dev/`
+- `apps/backend/web/migrations/stg/`
+- `apps/backend/web/migrations/test/`
+- `apps/backend/web/migrations/lite/`
 
 ```bash
 cd apps/backend
@@ -202,8 +202,8 @@ SNOW_APP_STATUS=dev flask --app web.application:app db history --directory web/m
 SNOW_APP_STATUS=dev flask --app web.application:app db downgrade --directory web/migrations/dev
 ```
 
-Lite SQLite bootstrap 走 `bootstrap_lite_database(...)`，对应迁移基线在 `web/migrations/lite/`。
-MySQL 到 Lite SQLite 的迁移脚本现在位于 `web/scripts/mysql_to_sqlite_lite_migration.py`。
+Lite SQLite bootstrap 走 `bootstrap_lite_database(...)`，对应迁移基线在 `apps/backend/web/migrations/lite/`。
+MySQL 到 Lite SQLite 的迁移脚本现在位于 `apps/backend/web/scripts/mysql_to_sqlite_lite_migration.py`。
 
 ## API 文档与约定
 
@@ -212,11 +212,11 @@ MySQL 到 Lite SQLite 的迁移脚本现在位于 `web/scripts/mysql_to_sqlite_l
 - 响应格式：统一使用 `R.ok(...)` / `R.fail(...)` 包装
 - 文档规范：详细写在接口 `docstring`，不直接返回 HTTP 状态码说明
 
-更多规范见 `web/docs/技术总结.md` 与 `web/docs/系统说明.md`。
+更多规范见 `apps/backend/web/docs/技术总结.md` 与 `apps/backend/web/docs/系统说明.md`。
 
 ## 测试
 
-后端和 lite 主线测试现在统一收口到 `web/webtest/`，其中 lite 回归位于 `web/webtest/lite/`。
+后端和 lite 主线测试现在统一收口到 `apps/backend/web/webtest/`，其中 lite 回归位于 `apps/backend/web/webtest/lite/`。
 根目录 `tests/` 主要保留 `xalpha` 独立测试和 `web + xalpha` 混合测试。
 
 ```bash
@@ -226,14 +226,14 @@ pytest -q
 ## 目录结构（关键模块）
 
 - `apps/backend/web/application.py`：应用入口，按 `SNOW_APP_STATUS` 加载配置
-- `web/models` | `web/services` | `web/routers`：数据模型、业务逻辑、API 路由
-- `web/scheduler` | `web/task`：定时任务与异步任务
-- `web/common`：工具、日志、配置与通用能力
+- `apps/backend/web/models` | `apps/backend/web/services` | `apps/backend/web/routers`：数据模型、业务逻辑、API 路由
+- `apps/backend/web/scheduler` | `apps/backend/web/task`：定时任务与异步任务
+- `apps/backend/web/common`：工具、日志、配置与通用能力
 - `apps/frontend`：前端工作区
-- `web/migrations`：backend workspace 下的 Alembic 迁移目录
-- `web/scripts`：backend workspace 下的后端脚本入口
-- `web/dev_support`：本地开发辅助 SQL 和运维附属物
-- `web/docs`：业务与技术文档
+- `apps/backend/web/migrations`：backend workspace 下的 Alembic 迁移目录
+- `apps/backend/web/scripts`：backend workspace 下的后端脚本入口
+- `apps/backend/web/dev_support`：本地开发辅助 SQL 和运维附属物
+- `apps/backend/web/docs`：业务与技术文档
 - `pnpm-workspace.yaml`：monorepo workspace 入口
 - `docker-compose.yml`：容器化启动配置
 

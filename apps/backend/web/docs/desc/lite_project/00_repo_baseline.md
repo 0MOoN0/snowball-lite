@@ -37,8 +37,8 @@
 
 ## 当前文档结构
 
-- 阶段二归档文档：`web/docs/desc/lite_stage2/`
-- 阶段三归档文档：`web/docs/desc/lite_stage3/`
+- 阶段二归档文档：`apps/backend/web/docs/desc/lite_stage2/`
+- 阶段三归档文档：`apps/backend/web/docs/desc/lite_stage3/`
 
 ## 当前 Git 约定
 

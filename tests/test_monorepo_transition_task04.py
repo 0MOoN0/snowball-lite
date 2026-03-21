@@ -21,9 +21,9 @@ def test_backend_workspace_bridge_and_docs_path_remain_available():
     assert (BACKEND_WORKSPACE / "web").is_dir()
     assert not (BACKEND_WORKSPACE / "web").is_symlink()
     assert (BACKEND_WORKSPACE / "xalpha").is_symlink()
-    assert (REPO_ROOT / "web").is_symlink()
-    assert (REPO_ROOT / "web" / "docs").is_dir()
-    assert (REPO_ROOT / "web" / "docs" / "review" / "monorepo_transition").is_dir()
+    assert (BACKEND_WORKSPACE / "web" / "docs").is_dir()
+    assert (BACKEND_WORKSPACE / "web" / "docs" / "task").is_dir()
+    assert (BACKEND_WORKSPACE / "web" / "docs" / "review").is_dir()
 
 
 def test_backend_workspace_can_import_web_and_xalpha_from_apps_backend(tmp_path: Path):
@@ -74,7 +74,7 @@ def test_backend_workspace_can_import_web_and_xalpha_from_apps_backend(tmp_path:
 
 def test_backend_workspace_commands_are_retargeted():
     root_readme = _read_text(REPO_ROOT / "README.md")
-    env_guide = _read_text(REPO_ROOT / "web" / "docs" / "环境变量配置指南.md")
+    env_guide = _read_text(BACKEND_WORKSPACE / "web" / "docs" / "环境变量配置指南.md")
     dockerfile = _read_text(REPO_ROOT / "Dockerfile")
     compose = _read_text(REPO_ROOT / "docker-compose.yml")
     backend_readme = _read_text(BACKEND_WORKSPACE / "README.md")

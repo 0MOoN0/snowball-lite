@@ -13,8 +13,8 @@
 
 ## 当前边界
 
-- `[web/docs/task/](../web/docs/task)` 和 `[web/docs/review/](../web/docs/review)` 继续作为执行文档区，不搬到这里
-- `[web/docs/desc/](../web/docs/desc)` 继续保留阶段归档和结论文档，后续再按主题逐步收口
+- `[apps/backend/web/docs/task/](../apps/backend/web/docs/task)` 和 `[apps/backend/web/docs/review/](../apps/backend/web/docs/review)` 继续作为执行文档区，不搬到这里
+- `[apps/backend/web/docs/desc/](../apps/backend/web/docs/desc)` 继续保留阶段归档和结论文档，后续再按主题逐步收口
 - `[doc/](../doc)` 继续作为 `xalpha` 的旧 Sphinx 文档区
 - 前端工作区说明见 `[apps/frontend/README.md](../apps/frontend/README.md)`
 
@@ -27,8 +27,8 @@
 
 ## 现有文档指针
 
-- 后端系统说明：`[web/docs/系统说明.md](../web/docs/系统说明.md)`
-- 后端环境说明：`[web/docs/环境变量配置指南.md](../web/docs/环境变量配置指南.md)`
-- lite 改造方案：`[web/docs/轻量版分支改造方案.md](../web/docs/轻量版分支改造方案.md)`
+- 后端系统说明：`[apps/backend/web/docs/系统说明.md](../apps/backend/web/docs/系统说明.md)`
+- 后端环境说明：`[apps/backend/web/docs/环境变量配置指南.md](../apps/backend/web/docs/环境变量配置指南.md)`
+- lite 改造方案：`[apps/backend/web/docs/轻量版分支改造方案.md](../apps/backend/web/docs/轻量版分支改造方案.md)`
 - 前端工作区说明：`[apps/frontend/README.md](../apps/frontend/README.md)`
 - `xalpha` 文档入口：`[doc/source/index.rst](../doc/source/index.rst)`
