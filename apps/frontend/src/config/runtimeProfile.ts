@@ -9,7 +9,7 @@ const parseFlag = (value: string | undefined, fallback: boolean) => {
 
 export const runtimeCapabilityFlags = {
   scheduler: parseFlag(import.meta.env.VITE_ENABLE_SCHEDULER, true),
-  systemToken: parseFlag(import.meta.env.VITE_ENABLE_SYSTEM_TOKEN, runtimeProfile !== 'lite'),
+  systemToken: parseFlag(import.meta.env.VITE_ENABLE_SYSTEM_TOKEN, true),
 }
 
 export const runtimeBackendTarget =

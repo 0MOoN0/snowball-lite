@@ -1,17 +1,28 @@
-# lite 去 Redis 收口任务设计
+# lite 去 Redis 收口（归档）
+
+## 归档状态
+
+- 状态：已完成
+- 原任务路径：`/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/lite_redis_dependency_cleanup_strategy.md`
+- 说明：这份文档已从 `task/` 归档到 `desc/lite_migration/project/`，保留完整设计、实现和验收结论
+- 当前事实：lite 主线在本任务范围内已经完成 Redis 收口；`/system/token`、databox token 注入、通知发送、资产初始化和 scheduler 手动任务解析都不再把 Redis 当默认前提
+
+## Checklist
+
 - [x] lite 默认禁用 Redis 和 Dramatiq
 - [x] `/api/enums/versions` 已切到 SQLite
 - [x] lite 启动已验证不依赖 `redis` 包
-- [ ] `/system/token` 改成 SQLite 持久化
-- [ ] databox 启动期 token 注入去 Redis
-- [ ] lite 下的通知、资产初始化完成无 Redis 收口
-- [ ] scheduler 历史 Redis 映射兼容尾巴清理
-- [ ] lite 文档、依赖和回归测试同步收口
+- [x] `/system/token` 改成 SQLite 持久化
+- [x] databox 启动期 token 注入去 Redis
+- [x] lite 下的通知、资产初始化完成无 Redis 收口
+- [x] scheduler 历史 Redis 映射兼容尾巴清理
+- [x] lite 文档、依赖和回归测试同步收口
+
 ## 任务状态
-- 状态：待执行
+- 状态：已完成
 - 目标：让 lite 主线在代码、配置、文档、测试四个层面都不再以 Redis 为前提
 - 边界：不删除历史 `dev/stg/test/prod` 的 Redis 能力，但 lite 不再读写 Redis
-- 当前判断：lite 现在已经默认不接 Redis，但仓库里还有少量 Redis 直连点和队列型调用残留
+- 当前判断：lite 主线在本任务范围内已经完成 Redis 收口，历史环境 Redis / Dramatiq 路径继续保留
 ## 1. 任务目标
 1. lite 主线不再初始化、读取、写入 Redis
 2. lite 继续保留 SQLite、本地 scheduler、xalpha cache 和核心业务链路

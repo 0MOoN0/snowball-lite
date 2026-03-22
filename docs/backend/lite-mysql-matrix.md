@@ -20,9 +20,11 @@
 | APScheduler 持久化 JobStore | 默认启用 | 默认启用 | 默认落到独立 SQLite 文件；可显式关闭回内存模式 |
 | flask-profiler | 可启用 | 默认关闭 | lite 默认不跑性能分析工具 |
 | xalpha SQL 缓存 | 默认走 SQL 缓存库 | 改成目录型 `csv` 缓存 | 不再把 `snowball_data` 这类 SQL 缓存库当主线前提 |
-| `databox` 启动初始化 | 视缓存而定 | 默认跳过 | 因为 lite 默认不开 Redis |
-| `/system/token` | 走 Redis 读写 token | 明确不支持 | lite 下直接给可解释失败 |
+| `databox` 启动初始化 | 视缓存和 Redis token 而定 | bootstrap 后从 SQLite `system_settings` 读 token；无 token 也可启动 | lite 不再把 Redis 当 databox 初始化前提 |
+| `/system/token` | 走 Redis 读写 token | 走 SQLite `system_settings` | 保持接口格式不变，但 lite 不再返回“Redis 不支持” |
 | `/api/enums/versions` | 读 Redis | 读 SQLite | 这是保留能力但换实现 |
+| 通知发送 | 可走队列 | 默认同步发送 | lite 不再要求 Redis broker；历史环境可继续走 actor |
+| 资产初始化 | 可走队列 actor | 默认同步初始化 | lite 通过服务层直接执行，旧环境 actor 路径保留 |
 | 多环境部署前提 | `dev/stg/test/prod` + MySQL/Redis/队列/调度 | 本地单机、弱依赖主线 | lite 不承诺整套重环境前提 |
 | 数据库引擎日志 | 默认可开 | 默认关闭 | lite 收口到更轻的运行口径 |
 

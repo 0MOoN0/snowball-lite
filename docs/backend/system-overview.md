@@ -7,6 +7,8 @@
 - 后端工作区从 `apps/backend/` 进入，真实代码位于 `apps/backend/web/`
 - lite 是默认主线，默认运行口径是 `SNOW_APP_STATUS=lite` + SQLite
 - MySQL、Redis、Dramatiq 和 profiler 相关能力仍然保留在仓库里；APScheduler 持久化已经收口进 lite 默认主线，但继续和业务库分离
+- lite 下 `/system/token`、`databox` 启动期 token 注入已经改走 SQLite `system_settings`
+- lite 下通知发送、资产初始化默认不要求 Redis / Dramatiq，优先同步执行或交给 scheduler
 - 当前可以说“lite 的 SQLite 可信度已经明显提升”，不能说“整个仓库已经完成 SQLite 迁移”
 
 ## 关键目录
@@ -32,7 +34,7 @@
 2. 初始化数据库模型；数据库失败会直接终止启动。
 3. 按 `ENABLE_*` 开关决定是否初始化 Redis、task queue、profiler；scheduler 在 lite 下默认开启，只有显式关闭时才跳过。
 4. 初始化 Flask-RESTX API、路由、异常处理和 `xalpha` 相关设置。
-5. lite 入口额外执行 `bootstrap_lite_database(...)`，确保 SQLite baseline 先就位。
+5. lite 入口额外执行 `bootstrap_lite_database(...)`，确保 SQLite baseline 先就位，并在 bootstrap 后完成 databox token 注入。
 
 lite 下默认运行开关：
 

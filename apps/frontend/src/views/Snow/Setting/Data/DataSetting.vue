@@ -2,7 +2,7 @@
   <ContentWrap title="数据设置" class="mt-5">
     <el-alert
       v-if="!runtimeCapabilityFlags.systemToken"
-      title="lite 口径下不支持系统 token / Redis 相关配置页"
+      title="当前运行口径已关闭系统 token 配置页"
       type="warning"
       :closable="false"
       show-icon
@@ -121,7 +121,7 @@ const getToken = async () => {
 // 提交表单
 const confirmForm = () => {
   if (!runtimeCapabilityFlags.systemToken) {
-    ElMessage.warning('lite 模式下不支持系统 token 配置')
+    ElMessage.warning('当前运行口径已关闭系统 token 配置')
     return
   }
   unref(formRef)
@@ -144,7 +144,7 @@ const confirmForm = () => {
 // 测试token
 const testCode = async () => {
   if (!runtimeCapabilityFlags.systemToken) {
-    ElMessage.warning('lite 模式下不支持系统 token 测试')
+    ElMessage.warning('当前运行口径已关闭系统 token 测试')
     tokenTestRes.value = false
     testTimestamp.value = new Date().toLocaleString()
     return

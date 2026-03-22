@@ -23,7 +23,7 @@
 - 默认 lite 口径：`pnpm --dir apps/frontend run dev`，后端先 `cd apps/backend && python -m web.lite_application`，默认对齐 `5001`
 - 历史 dev 口径：`pnpm --dir apps/frontend run dev:dev`，后端先 `cd apps/backend && SNOW_APP_STATUS=dev python -m web.application`，默认对齐 `15000`
 
-前端自己的说明见 `apps/frontend/README.md`。lite 下 scheduler 已进入默认主链路，`/system/token` 相关页面仍会显式降级，不按“全量可用”口径说明。
+前端自己的说明见 `apps/frontend/README.md`。lite 下 scheduler 已进入默认主链路，`/system/token` 已切到 SQLite `system_settings` 持久化；历史环境仍保留 Redis 路径，不按“所有环境已经统一”口径说明。
 
 ## 后端工作区
 
@@ -54,7 +54,7 @@
 
 ## 技术栈与架构
 
-- 技术栈：`Flask 2.2`、`SQLAlchemy 1.4`、`APScheduler`、`Redis`、`Jinja2`、`Flask-RESTX 1.3.0`、`Dramatiq`
+- 技术栈：`Flask 2.2`、`SQLAlchemy 1.4`、`APScheduler`、`Jinja2`、`Flask-RESTX 1.3.0`，并兼容历史环境里的 `Redis`、`Dramatiq`
 - 核心模块：`apps/backend/web/models` | `apps/backend/web/routers` | `apps/backend/web/services` | `apps/backend/web/scheduler` | `apps/backend/web/task` | `apps/backend/web/common`
 - 多数据库：使用 `__bind_key__` 绑定不同库；默认数据源用于数据存放，业务库用于业务实体
 - 日志与规范：统一使用 `web.weblogger`，异常日志统一 `error(msg, exc_info=True)`
@@ -64,8 +64,8 @@
 
 - 数据盒（DataBox）：统一外部数据适配与指标能力扩展（Akshare 等），返回轻量 DTO
 - 分析与网格：资产与网格策略分析、记录与可视化导出
-- 通知与渠道：支持 `pushplus`、`Telegram` 等通知渠道，模板化输出
-- 任务调度：`APScheduler` 定时任务，`Dramatiq` 异步任务与队列
+- 通知与渠道：支持 `pushplus`、`Telegram` 等通知渠道，lite 默认同步发送，历史环境可继续走队列
+- 任务调度：`APScheduler` 定时任务是 lite 默认主链路，`Dramatiq` 只保留给历史环境异步队列
 - 多环境配置：`dev/stg/test` 独立配置、数据库与迁移目录
 - API 文档：`Flask-RESTX` 文档挂载在 `RESTX_DOC=/docs`
 
@@ -188,6 +188,8 @@ uv run --no-dev python -m web.lite_application
 - `LITE_XALPHA_CACHE_DIR` 只在显式切回 `csv` backend 时使用
 - 旧的 `data/lite_xalpha_cache` 不再作为默认路径，也不会为默认 SQLite 模式做迁移；它继续按可丢弃缓存处理
 - Lite 模式只保证最小启动链路，不等同于完整生产能力
+- lite 下 `/system/token`、`databox` 启动期 token 注入都走 SQLite `system_settings`
+- lite 下通知发送和资产初始化默认不要求 Redis / Dramatiq；需要延迟能力时优先走 scheduler
 - lite 默认开启 scheduler；如果需要临时关闭，可设置 `LITE_ENABLE_SCHEDULER=false`
 - lite 默认开启持久化 jobstore；如果需要临时切回内存模式，可设置 `LITE_ENABLE_PERSISTENT_JOBSTORE=false`
 - 如果需要覆盖默认持久化文件位置，再设置 `LITE_SCHEDULER_DB_PATH=/absolute/path/to/lite_scheduler.db`

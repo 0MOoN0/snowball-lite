@@ -3,10 +3,12 @@ from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
 import uuid
 
+from flask import Flask
+
 from web.common.cache import cache
 from web.common.cons import webcons
 from web.models.scheduler.scheduler_log import SchedulerLog
-from web.scheduler import _resolve_job_id
+from web.scheduler import _resolve_job_id, scheduler as scheduler_instance
 from web.scheduler.manual_job_id import build_manual_job_id, decode_manual_job_id
 
 
@@ -112,10 +114,48 @@ class TestSchedulerComponents:
         redis_client.get.return_value = self.test_job_id
         mock_get_cache_client_or_none.return_value = redis_client
 
-        event = Mock(job_id=self.test_new_job_id)
+        app = Flask(__name__)
+        app.config["_config_name"] = "dev"
 
-        assert _resolve_job_id(event) == self.test_job_id
+        with app.app_context():
+            event = Mock(job_id=self.test_new_job_id)
+            assert _resolve_job_id(event) == self.test_job_id
         redis_client.get.assert_called_once_with(f"{webcons.RedisKeyPrefix.DYNAMIC_JOB}{self.test_new_job_id}")
+
+    @patch('web.scheduler._get_cache_client_or_none')
+    def test_resolve_job_id_skips_redis_mapping_in_lite_runtime(self, mock_get_cache_client_or_none):
+        """测试 lite 下不再读取 Redis 动态映射"""
+        redis_client = Mock()
+        mock_get_cache_client_or_none.return_value = redis_client
+
+        app = Flask(__name__)
+        app.config["_config_name"] = "lite"
+
+        with app.app_context():
+            event = Mock(job_id=self.test_new_job_id)
+            assert _resolve_job_id(event) == self.test_new_job_id
+
+        redis_client.get.assert_not_called()
+
+    @patch('web.scheduler.has_app_context', return_value=False)
+    @patch('web.scheduler._get_cache_client_or_none')
+    def test_resolve_job_id_skips_redis_mapping_in_lite_runtime_without_flask_context(
+        self,
+        mock_get_cache_client_or_none,
+        _mock_has_app_context,
+    ):
+        """测试 lite 在无 Flask 上下文的 listener 线程里也不再读取 Redis 映射"""
+        redis_client = Mock()
+        mock_get_cache_client_or_none.return_value = redis_client
+
+        app = Flask(__name__)
+        app.config["_config_name"] = "lite"
+
+        with patch.object(scheduler_instance, "app", app):
+            event = Mock(job_id=self.test_new_job_id)
+            assert _resolve_job_id(event) == self.test_new_job_id
+
+        redis_client.get.assert_not_called()
     
     def test_uuid_generation_uniqueness(self):
         """测试UUID生成的唯一性"""

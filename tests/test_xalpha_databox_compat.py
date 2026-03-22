@@ -17,6 +17,8 @@ from web.databox.base import databox as global_databox
 from web.databox.data_box import DataBox
 from web.databox.adapter.data.xa_data_adapter import XaDataAdapter
 from web.databox.adapter.data.xa_service import XaServiceAdapter
+from web.lite_bootstrap import bootstrap_lite_database
+from web.services.system.system_token_service import system_token_service
 from xalpha.info import fundinfo as fundinfo_cls
 from xalpha.universal import cachedio
 
@@ -178,6 +180,32 @@ def test_lite_databox_fund_info_uses_configured_cache_backend():
         assert _engine_database_path(fundinfo_kwargs["path"]) == Path(
             app.config["XALPHA_CACHE_SQLITE_PATH"]
         ).resolve()
+
+
+def test_lite_databox_init_reads_sqlite_token_without_redis():
+    app = create_app("lite")
+
+    with app.app_context():
+        bootstrap_lite_database(app)
+        system_token_service.save_token_payload(
+            xq_token={"xq_a_token": "sqlite-token", "u": "sqlite-user"},
+            serverchen_sendkey="sqlite-sendkey",
+        )
+
+        with patch(
+            "web.databox.data_box.cache.get_redis_client",
+            side_effect=AssertionError("lite databox init should not touch redis"),
+        ), patch.object(XaDataAdapter, "init_adapter") as mock_xa_init, patch.object(
+            XaServiceAdapter, "init_adapter"
+        ) as mock_xa_service_init:
+            global_databox.init_app(app)
+
+        mock_xa_init.assert_called_once_with(
+            {"xq_a_token": "sqlite-token", "u": "sqlite-user"}
+        )
+        mock_xa_service_init.assert_called_once_with(
+            {"xq_a_token": "sqlite-token", "u": "sqlite-user"}
+        )
 
 
 def test_lite_xa_data_adapter_get_daily_uses_configured_cache_backend():

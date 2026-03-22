@@ -1,6 +1,5 @@
 from web.weblogger import debug
 from web.common.cons import webcons
-from web.models.asset.asset import Asset
 from web.models.asset.asset_code import AssetCodeSchema, AssetCode
 from web.services.asset.asset_service import asset_service
 from web.task.Base import dramatiq
@@ -46,12 +45,5 @@ def init_asset(asset_code_str: dict):
     """
     # 打印log
     debug('init_asset start')
-    strategy = {
-        Asset.get_asset_type_enum().FUND: asset_service.init_fund_asset_data,
-        Asset.get_asset_type_enum().INDEX: asset_service.init_index_asset_data
-    }
     asset_code: AssetCode = AssetCodeSchema().load(asset_code_str)
-    # 根据asset_id查询资产数据
-    asset: Asset = Asset.query.get(asset_code.asset_id)
-    strategy.get(asset.asset_type)(asset_code)
-
+    asset_service.init_asset_data(asset_code)

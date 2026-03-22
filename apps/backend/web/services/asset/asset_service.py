@@ -26,6 +26,23 @@ from web.weblogger import logger
 
 @singleton
 class AssetService:
+    def init_asset_data(self, asset_code: AssetCode):
+        """
+        根据资产类型执行初始化，供 lite 同步入口和 actor 复用。
+        """
+        asset = Asset.query.get(asset_code.asset_id)
+        if asset is None:
+            raise WebBaseException(msg=f"资产不存在，asset_id={asset_code.asset_id}")
+
+        strategy = {
+            Asset.get_asset_type_enum().FUND: self.init_fund_asset_data,
+            Asset.get_asset_type_enum().INDEX: self.init_index_asset_data,
+        }
+        handler = strategy.get(asset.asset_type)
+        if handler is None:
+            raise WebBaseException(msg=f"暂不支持的资产类型：{asset.asset_type}")
+        return handler(asset_code)
+
     def init_fund_asset_data(self, asset_code: AssetCode):
         """
         根据给定参数获取资产数据并存入数据库，如果天天基金代码不存在，则无法获取持仓数据和净值数据

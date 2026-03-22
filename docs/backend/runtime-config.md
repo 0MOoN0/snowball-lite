@@ -48,6 +48,8 @@ uv run --no-dev python -m web.lite_application
 
 - lite 入口会自动把 `SNOW_APP_STATUS` 固定成 `lite`
 - lite 启动前会执行 `bootstrap_lite_database(...)`，不要把 `db.create_all()` 当迁移替代方案
+- lite 下 `/system/token` 和 `databox` 启动期 token 注入都走 SQLite `system_settings`
+- lite 下通知发送、资产初始化默认不要求 Redis / Dramatiq；需要延迟能力时优先走 scheduler
 - 旧的 `data/lite_xalpha_cache` 不再作为默认路径，也不会为默认 SQLite 模式做迁移；它继续按可丢弃缓存处理
 - test 口径默认应使用 pytest 临时路径里的 SQLite 文件，不要直接指向 stable/prod 或 dev 长期库
 - lite 默认会把 scheduler jobstore 落到独立 SQLite 文件；业务库和 `LITE_SCHEDULER_DB_PATH` 必须各自独立

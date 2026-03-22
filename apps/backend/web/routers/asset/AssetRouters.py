@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint
+from flask import Blueprint, current_app
 from flask_restful import Api, Resource, reqparse
 from sqlalchemy import or_
 
@@ -16,9 +16,14 @@ from web.models.asset.AssetFundFeeRule import AssetFundFeeRule
 from web.models.asset.AssetHoldingData import AssetHoldingData
 from web.models.category.Category import Category
 from web.models.grid.Grid import Grid
+from web.services.asset.asset_service import asset_service
 
 asset_bp = Blueprint("asset", __name__, url_prefix="/asset")
 asset_api = Api(asset_bp)
+
+
+def _is_lite_runtime() -> bool:
+    return current_app.config.get("_config_name") == "lite" or current_app.config.get("ENV") == "lite"
 
 
 class AssetRouter(Resource):
@@ -100,13 +105,16 @@ class AssetRouter(Resource):
                 session.execute(AssetCategory.__table__.insert(), asset_category_list,
                                 bind=db.engines['snowball'])
             session.commit()
-            # 执行初始化任务，让任务在1秒后执行
-            from web.task.actors.AssetActors import init_asset
+            if _is_lite_runtime():
+                asset_service.init_asset_data(code)
+            else:
+                # 执行初始化任务，让任务在1秒后执行
+                from web.task.actors.AssetActors import init_asset
 
-            init_asset.send_with_options(
-                args=(AssetCodeSchema().dump(code, many=False),),
-                delay=1000,
-            )
+                init_asset.send_with_options(
+                    args=(AssetCodeSchema().dump(code, many=False),),
+                    delay=1000,
+                )
         return R.ok(msg='操作成功')
 
     def put(self):

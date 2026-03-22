@@ -26,6 +26,7 @@ from web.databox.models.fund import DataBoxFundInfo
 from web.databox.service.adapter_service import AdapterService
 from web.databox.service.convertible_bond_service import ConvertibleBondService
 from web.databox.service.index_valuation_service import IndexValuationService
+from web.services.system.system_token_service import system_token_service
 from web.models import db
 from web.models.asset.AssetFundDailyData import AssetFundDailyData
 from web.models.asset.AssetHoldingData import AssetHoldingDataDTO
@@ -81,6 +82,18 @@ class DataBox:
         self.convertible_bond_service = ConvertibleBondService(self.adapter_service)
 
     def init_app(self, app):
+        is_lite_runtime = app.config.get("_config_name") == "lite" or app.config.get("ENV") == "lite"
+        if is_lite_runtime:
+            try:
+                xq_token = system_token_service.get_xq_token()
+            except Exception as exc:
+                error(f"lite databox 初始化时读取 SQLite token 失败: {exc}", exc_info=True)
+                return
+            if xq_token:
+                self.xa_adapter.init_adapter(xq_token)
+                self.xa_service.init_adapter(xq_token)
+            return
+
         redis_client = cache.get_redis_client()
         xq_token = redis_client.get(webcons.RedisKey.XQ_TOKEN)
         if xq_token:

@@ -14,6 +14,7 @@ from web.scheduler import _resolve_job_id
 
 
 REPO_ROOT = get_repo_root()
+BACKEND_WORKSPACE = REPO_ROOT / "apps" / "backend"
 pytestmark = pytest.mark.local
 
 
@@ -43,7 +44,7 @@ def _run_python_with_blocked_imports(tmp_path: pathlib.Path, blocked_modules: se
     )
 
     env = os.environ.copy()
-    pythonpath = [str(tmp_path), str(REPO_ROOT)]
+    pythonpath = [str(tmp_path), str(BACKEND_WORKSPACE), str(REPO_ROOT)]
     if env.get("PYTHONPATH"):
         pythonpath.append(env["PYTHONPATH"])
     env["PYTHONPATH"] = os.pathsep.join(pythonpath)
@@ -61,9 +62,7 @@ def test_lite_bootstrap_does_not_require_optional_infra_packages(tmp_path: pathl
     result = _run_python_with_blocked_imports(
         tmp_path=tmp_path,
         blocked_modules={
-            "apscheduler",
             "dramatiq",
-            "flask_apscheduler",
             "flask_profiler",
             "redis",
         },
@@ -82,9 +81,7 @@ def test_lite_bootstrap_survives_blocked_mysql_and_optional_infra_packages(tmp_p
         tmp_path=tmp_path,
         blocked_modules={
             "MySQLdb",
-            "apscheduler",
             "dramatiq",
-            "flask_apscheduler",
             "flask_profiler",
             "mysql",
             "pymysql",
@@ -155,9 +152,7 @@ def test_lite_application_bootstraps_database_when_imported(tmp_path: pathlib.Pa
         tmp_path=tmp_path,
         blocked_modules={
             "MySQLdb",
-            "apscheduler",
             "dramatiq",
-            "flask_apscheduler",
             "flask_profiler",
             "mysql",
             "pymysql",

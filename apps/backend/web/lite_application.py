@@ -19,6 +19,9 @@ app = create_app("lite")
 
 with app.app_context():
     bootstrap_lite_database(app)
+    from web.databox import databox as lite_databox
+
+    lite_databox.init_app(app)
 
 print(f"配置类型: {app.config.get('ENV', '未知')}")
 info(f"配置类型: {app.config.get('ENV', '未知')}")

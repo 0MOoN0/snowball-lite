@@ -4,7 +4,6 @@ from flask import current_app, has_app_context
 
 from web.models.notice.Notification import Notification, NotificationSchema
 from web.services.notice.notification_service import notification_service
-from web.task.actors import NotificationActors
 from web.weblogger import error, info, warning
 
 
@@ -19,6 +18,12 @@ def _task_queue_available() -> bool | None:
         return bool(current_app.config["ENABLE_TASK_QUEUE"])
 
     return None
+
+
+def _send_notification_via_actor(notification_json: str) -> None:
+    from web.task.actors import NotificationActors
+
+    NotificationActors.send_notification.send(notification_json)
 
 
 def dispatch_notification(notification: Notification) -> Tuple[bool, str]:
@@ -41,7 +46,7 @@ def dispatch_notification(notification: Notification) -> Tuple[bool, str]:
     task_queue_available = _task_queue_available()
     if notification_json is not None and task_queue_available is not False:
         try:
-            NotificationActors.send_notification.send(notification_json)
+            _send_notification_via_actor(notification_json)
             return True, "actor"
         except Exception as exc:
             warning(f"通知通过Actor发送失败，尝试同步发送: {exc}")

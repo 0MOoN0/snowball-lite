@@ -5,6 +5,7 @@ import logging
 
 import sqlalchemy
 from apscheduler.events import *
+from flask import current_app, has_app_context
 
 try:
     import pymysql
@@ -27,10 +28,6 @@ from web.scheduler import notice_scheduler
 
 # 全局变量，跟踪调度器是否已经初始化
 _scheduler_initialized = False
-
-
-def _is_lite_runtime(app) -> bool:
-    return app.config.get("_config_name") == "lite" or app.config.get("ENV") == "lite"
 
 
 def _mysql_operational_errors():
@@ -125,6 +122,9 @@ def _resolve_job_id(event: JobSubmissionEvent | JobExecutionEvent) -> str:
     if manual_job_id is not None:
         return manual_job_id
 
+    if _is_lite_runtime(current_app if has_app_context() else None):
+        return getattr(event, "job_id", "")
+
     mapped = None
     redis_client = _get_cache_client_or_none()
     if redis_client is not None:
@@ -132,6 +132,16 @@ def _resolve_job_id(event: JobSubmissionEvent | JobExecutionEvent) -> str:
             webcons.RedisKeyPrefix.DYNAMIC_JOB + getattr(event, "job_id", "")
         )
     return mapped if mapped is not None else getattr(event, "job_id", "")
+
+
+def _is_lite_runtime(app=None) -> bool:
+    if app is None and has_app_context():
+        app = current_app
+    if app is None:
+        app = getattr(scheduler, "app", None)
+    if app is None:
+        return False
+    return app.config.get("_config_name") == "lite" or app.config.get("ENV") == "lite"
 
 
 def _get_cache_client_or_none():
