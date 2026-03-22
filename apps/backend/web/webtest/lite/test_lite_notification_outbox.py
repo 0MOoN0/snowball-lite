@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
+from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_SUBMITTED, JobExecutionEvent, JobSubmissionEvent
 from flask import Flask
 
 from web import create_app
@@ -20,6 +21,8 @@ from web.scheduler.asset_scheduler import (
     _make_grid_monitor_notification,
 )
 from web.scheduler.async_task_scheduler import consume_notification_outbox
+from web.scheduler import scheduler_listener
+from web.scheduler.manual_job_id import build_manual_job_id
 from web.services.async_task.notification_outbox_service import notification_outbox_service
 from web.services.notice.notification_service import notification_service
 
@@ -180,6 +183,101 @@ def test_notification_outbox_consumer_retries_and_marks_succeeded(
             assert outbox_record.last_error is None
     finally:
         _dispose_app(app)
+
+
+def test_notification_outbox_signal_only_skips_empty_poll_all_logs(lite_app):
+    job_id = "AsyncTaskScheduler.consume_notification_outbox"
+    scheduled_run_time = datetime(2026, 3, 22, 16, 1, 44)
+    empty_stats = {
+        "claimed": 0,
+        "succeeded": 0,
+        "retried": 0,
+        "failed": 0,
+        "skipped": 0,
+    }
+
+    with lite_app.app_context(), patch("web.scheduler.db.session.add") as mock_add, patch(
+        "web.scheduler.db.session.commit"
+    ) as mock_commit:
+        scheduler_listener(
+            JobSubmissionEvent(
+                EVENT_JOB_SUBMITTED,
+                job_id,
+                "default",
+                [scheduled_run_time],
+            )
+        )
+        scheduler_listener(
+            JobExecutionEvent(
+                EVENT_JOB_EXECUTED,
+                job_id,
+                "default",
+                scheduled_run_time,
+                retval=empty_stats,
+            )
+        )
+
+    assert mock_add.call_count == 0
+    assert mock_commit.call_count == 0
+
+
+def test_notification_outbox_signal_only_persists_executed_log_when_claimed(
+    lite_app,
+):
+    job_id = "AsyncTaskScheduler.consume_notification_outbox"
+    scheduled_run_time = datetime(2026, 3, 22, 16, 1, 44)
+    claimed_stats = {
+        "claimed": 2,
+        "succeeded": 2,
+        "retried": 0,
+        "failed": 0,
+        "skipped": 0,
+    }
+
+    with lite_app.app_context(), patch("web.scheduler.db.session.add") as mock_add, patch(
+        "web.scheduler.db.session.commit"
+    ) as mock_commit:
+        scheduler_listener(
+            JobSubmissionEvent(
+                EVENT_JOB_SUBMITTED,
+                job_id,
+                "default",
+                [scheduled_run_time],
+            )
+        )
+        scheduler_listener(
+            JobExecutionEvent(
+                EVENT_JOB_EXECUTED,
+                job_id,
+                "default",
+                scheduled_run_time,
+                retval=claimed_stats,
+            )
+        )
+
+    assert mock_add.call_count == 1
+    assert mock_commit.call_count == 1
+
+
+def test_manual_notification_outbox_retains_submitted_log(lite_app):
+    original_job_id = "AsyncTaskScheduler.consume_notification_outbox"
+    manual_job_id = build_manual_job_id(original_job_id, "manual-run")
+    scheduled_run_time = datetime(2026, 3, 22, 16, 1, 44)
+
+    with lite_app.app_context(), patch("web.scheduler.db.session.add") as mock_add, patch(
+        "web.scheduler.db.session.commit"
+    ) as mock_commit:
+        scheduler_listener(
+            JobSubmissionEvent(
+                EVENT_JOB_SUBMITTED,
+                manual_job_id,
+                "default",
+                [scheduled_run_time],
+            )
+        )
+
+    assert mock_add.call_count == 1
+    assert mock_commit.call_count == 1
 
 
 def test_non_lite_grid_monitor_notification_keeps_direct_dispatch():

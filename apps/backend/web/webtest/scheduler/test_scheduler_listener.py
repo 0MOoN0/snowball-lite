@@ -8,7 +8,11 @@ from flask import Flask
 from web.common.cache import cache
 from web.common.cons import webcons
 from web.models.scheduler.scheduler_log import SchedulerLog
-from web.scheduler import _resolve_job_id, scheduler as scheduler_instance
+from web.scheduler import (
+    _get_execution_persistence_strategy,
+    _resolve_job_id,
+    scheduler as scheduler_instance,
+)
 from web.scheduler.manual_job_id import build_manual_job_id, decode_manual_job_id
 
 
@@ -156,6 +160,15 @@ class TestSchedulerComponents:
             assert _resolve_job_id(event) == self.test_new_job_id
 
         redis_client.get.assert_not_called()
+
+    def test_execution_persistence_strategy_registry_defaults_to_full(self):
+        assert _get_execution_persistence_strategy("unknown.job") == "full"
+
+    def test_execution_persistence_strategy_registry_marks_outbox_as_signal_only(self):
+        assert (
+            _get_execution_persistence_strategy("AsyncTaskScheduler.consume_notification_outbox")
+            == "signal_only"
+        )
     
     def test_uuid_generation_uniqueness(self):
         """测试UUID生成的唯一性"""

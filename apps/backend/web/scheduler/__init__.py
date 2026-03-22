@@ -30,6 +30,12 @@ from web.scheduler import notice_scheduler
 # 全局变量，跟踪调度器是否已经初始化
 _scheduler_initialized = False
 
+_EXECUTION_PERSISTENCE_DEFAULT_STRATEGY = "full"
+_EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY = "signal_only"
+_EXECUTION_PERSISTENCE_STRATEGY_REGISTRY: dict[str, str] = {
+    "AsyncTaskScheduler.consume_notification_outbox": _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY,
+}
+
 
 def _mysql_operational_errors():
     errors = [sqlalchemy.exc.OperationalError]
@@ -150,6 +156,46 @@ def _get_cache_client_or_none():
         return cache.get_redis_client()
     except RuntimeError:
         return None
+
+
+def _get_execution_persistence_strategy(job_id: str | None) -> str:
+    if not job_id:
+        return _EXECUTION_PERSISTENCE_DEFAULT_STRATEGY
+    return _EXECUTION_PERSISTENCE_STRATEGY_REGISTRY.get(
+        job_id,
+        _EXECUTION_PERSISTENCE_DEFAULT_STRATEGY,
+    )
+
+
+def _is_manual_job_id(raw_job_id: str | None) -> bool:
+    return decode_manual_job_id(raw_job_id or "") is not None
+
+
+def _has_business_signal(execution_event: JobExecutionEvent) -> bool:
+    retval = getattr(execution_event, "retval", None)
+    if retval is None:
+        return False
+
+    claimed = None
+    if isinstance(retval, dict):
+        claimed = retval.get("claimed")
+    else:
+        claimed = getattr(retval, "claimed", None)
+
+    try:
+        return int(claimed) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _should_persist_execution_event(
+    job_id: str,
+    execution_event: JobExecutionEvent,
+) -> bool:
+    strategy = _get_execution_persistence_strategy(job_id)
+    if strategy != _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY:
+        return True
+    return _has_business_signal(execution_event)
 
 
 def _attach_run_log_buffer(job_id: str, scheduled_run_time) -> None:
@@ -537,6 +583,8 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
     logs_to_persist: str | None = None
     job_id_for_persist: str | None = None
     run_time_for_persist = None
+    job_id_resolved = _resolve_job_id(callback_event)
+    is_manual_job = _is_manual_job_id(job_id_str)
 
     if callback_event.code == EVENT_JOB_SUBMITTED:
         event_type_str = "任务已提交 (SUBMITTED)"
@@ -547,7 +595,6 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
         )
         # 运行日志开始：挂载缓冲处理器（零线程）
         try:
-            job_id_resolved = _resolve_job_id(callback_event)
             scheduled_rt = getattr(callback_event, "scheduled_run_time", None) or getattr(callback_event, "scheduled_run_times", [None])[0]
             _attach_run_log_buffer(job_id_resolved, scheduled_rt)
         except Exception as e:
@@ -561,7 +608,6 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
         )
         # 运行日志结束：卸载缓冲并入库
         try:
-            job_id_resolved = _resolve_job_id(callback_event)
             scheduled_rt = getattr(callback_event, "scheduled_run_time", None) or getattr(callback_event, "scheduled_run_times", [None])[0]
             logs_to_persist = _detach_run_log_buffer(job_id_resolved, scheduled_rt)
             job_id_for_persist = job_id_resolved
@@ -581,7 +627,6 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
         )  # 对于生产环境，可能需要更精简的错误日志或发送到专门的错误跟踪系统
         # 运行日志结束：卸载缓冲并入库（包含错误信息）
         try:
-            job_id_resolved = _resolve_job_id(callback_event)
             scheduled_rt = getattr(callback_event, "scheduled_run_time", None) or getattr(callback_event, "scheduled_run_times", [None])[0]
             logs_to_persist = _detach_run_log_buffer(job_id_resolved, scheduled_rt)
             job_id_for_persist = job_id_resolved
@@ -595,7 +640,6 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
         )
         # 运行日志结束：卸载缓冲并入库（错过执行也记录时间窗内日志）
         try:
-            job_id_resolved = _resolve_job_id(callback_event)
             scheduled_rt = getattr(callback_event, "scheduled_run_time", None) or getattr(callback_event, "scheduled_run_times", [None])[0]
             logs_to_persist = _detach_run_log_buffer(job_id_resolved, scheduled_rt)
             job_id_for_persist = job_id_resolved
@@ -620,7 +664,25 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
             无返回值。
 
         """
-        job_id = _resolve_job_id(execution_event)
+        job_id = job_id_resolved
+        strategy = _get_execution_persistence_strategy(job_id)
+        if (
+            execution_event.code == EVENT_JOB_SUBMITTED
+            and strategy == _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY
+            and not is_manual_job
+        ):
+            debug(
+                "APScheduler事件: SUBMITTED 命中 signal_only 策略且不是手动触发，跳过落库"
+            )
+            return
+        if (
+            execution_event.code == EVENT_JOB_EXECUTED
+            and not _should_persist_execution_event(job_id, execution_event)
+        ):
+            debug(
+                "APScheduler事件: EXECUTED 命中 signal_only 策略且未发现业务信号，跳过落库"
+            )
+            return
         # 记录日志
         scheduler_log: SchedulerLog = SchedulerLog()
         scheduler_log.job_id = job_id
