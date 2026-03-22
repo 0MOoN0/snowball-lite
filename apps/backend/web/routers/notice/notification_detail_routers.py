@@ -1,3 +1,4 @@
+from decimal import Decimal, ROUND_HALF_UP
 from typing import List
 
 from flask_restx import Namespace, Resource
@@ -22,6 +23,18 @@ if api:
     api.add_namespace(notification_api_ns, path="/api/notification")
 
 notification_models = create_notification_models(notification_api_ns)
+
+
+def _to_scaled_int(value, scale: int = 1, *, absolute: bool = False) -> int | None:
+    if value is None:
+        return None
+
+    integer_value = int(
+        (Decimal(str(value)) * Decimal(scale)).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )
+    )
+    return abs(integer_value) if absolute else integer_value
 
 
 @notification_api_ns.route('/<int:notification_id>')
@@ -209,15 +222,30 @@ class NotificationRouters(Resource):
                         .join(GridTypeDetail, GridType.id == GridTypeDetail.grid_type_id, isouter=True) \
                         .filter(GridTypeDetail.id == grid_type_detail_id) \
                         .first()
-                    trade_records: List[dict] = [record for trade_dict in grid_record.get('tradeRecord') for record in
-                                                 trade_dict.values()]
+                    trade_records: List[dict] = []
+                    for trade_dict in grid_record.get('tradeRecord'):
+                        for record in trade_dict.values():
+                            normalized_record = dict(record)
+                            normalized_record.pop("recordId", None)
+                            trade_records.append(normalized_record)
                     trade_records: List[Record] = RecordListSchema().load(trade_records, many=True, partial=True,
                                                                           unknown='EXCLUDE')
                     for trade_record in trade_records:
                         trade_record.asset_id = grid_type.asset_id
-                        trade_record.transactions_fee *= 1000
-                        trade_record.transactions_price *= 1000
-                        trade_record.transactions_amount = abs(trade_record.transactions_amount * 1000)
+                        trade_record.transactions_fee = _to_scaled_int(
+                            trade_record.transactions_fee, scale=1000
+                        )
+                        trade_record.transactions_share = _to_scaled_int(
+                            trade_record.transactions_share
+                        )
+                        trade_record.transactions_price = _to_scaled_int(
+                            trade_record.transactions_price, scale=1000
+                        )
+                        trade_record.transactions_amount = _to_scaled_int(
+                            trade_record.transactions_amount,
+                            scale=1000,
+                            absolute=True,
+                        )
                     db.session.add_all(trade_records)
                     db.session.flush()
                     grid_type_records: List[GridTypeRecord] = [GridTypeRecord(grid_type_id=grid_type.id,

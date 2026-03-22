@@ -53,7 +53,8 @@ class Colors:
 
 class LoggerInitialize:
     def init_logger(self, app, logging_level=logging.DEBUG):  # 设置默认日志级别为DEBUG
-        log_path = app.root_path + "logs/"
+        backend_root = os.path.dirname(app.root_path)
+        log_path = os.path.join(backend_root, "weblogs")
         xa_logger = logging.getLogger("xalpha")
 
         # 设置logger不向上传播日志
@@ -63,7 +64,7 @@ class LoggerInitialize:
         # 创建月份文件夹的日志处理器
         # 设置日志保留30天
         file_handler_debug = MyTimedRotatingFileHandler(
-            log_path + "debug/",
+            os.path.join(log_path, "debug"),
             level="debug",
             when="midnight",
             interval=1,
@@ -73,7 +74,7 @@ class LoggerInitialize:
 
         # 输出错误日志
         file_handler_error = MyTimedRotatingFileHandler(
-            log_path + "error/",
+            os.path.join(log_path, "error"),
             level="error",
             when="midnight",
             interval=1,
@@ -222,7 +223,7 @@ class MyTimedRotatingFileHandler(TimedRotatingFileHandler):
     # 重写__init__()方法
     def __init__(
         self,
-        filename_base_dir, # 例如: "logs/debug/"
+        filename_base_dir, # 例如: ".../apps/backend/weblogs/debug"
         level,
         when="midnight",
         interval=1,
@@ -231,7 +232,7 @@ class MyTimedRotatingFileHandler(TimedRotatingFileHandler):
         delay=False,
         utc=False,
     ):
-        self.base_dir = filename_base_dir  # 例如 "logs/debug/"
+        self.base_dir = filename_base_dir  # 例如 ".../apps/backend/weblogs/debug"
         self.my_level = level # 例如 "debug"
         self.user_backup_count_intent = backupCount_user_intent # 保存用户意图
 

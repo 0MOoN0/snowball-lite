@@ -45,6 +45,7 @@
 ## 3. 关键目录
 
 - `apps/backend/web/`：后端真实目录，包含模型、路由、服务、调度、任务、模板、迁移和项目文档。
+- `apps/backend/weblogs/`：后端运行日志目录；当前应用日志和 gunicorn 日志都落在这里，不按 `apps/backend/web/logs/` 口径找日志。
 - `apps/frontend/`：前端工作区。
 - `xalpha/`：独立能力层和兼容适配代码。
 - `tests/`：lite 运行链路、bootstrap、兼容验证。
@@ -89,14 +90,6 @@
 - Flask 接口、服务、模型集成优先看 `apps/backend/web/webtest/`。
 - lite 主线路径新增能力，优先补 SQLite 下可重复执行的测试。
 - 牵涉 migration、lite bootstrap、阶段性结论时，优先补 `test_lite_*` 或 `apps/backend/web/webtest/` 下的对应验证。
-
-文档直接复用现有落点：
-
-- 入口和使用说明：`README.md`
-- 仓库级长期文档：`docs/`
-- 阶段归档、结论、设计说明：`apps/backend/web/docs/desc/`
-- 当前阶段任务：`apps/backend/web/docs/task/`
-- 评审、复盘、阶段状态：`apps/backend/web/docs/review/`
 
 ## 7. Git 与规则冲突
 

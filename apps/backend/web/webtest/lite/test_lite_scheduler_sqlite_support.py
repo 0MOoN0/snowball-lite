@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime
 import sys
 from types import SimpleNamespace
 
+from apscheduler.events import EVENT_JOB_ERROR, JobExecutionEvent
 import pytest
 import sqlalchemy
 
@@ -11,6 +13,8 @@ from web import create_app
 from web.common.utils.backend_paths import get_default_lite_scheduler_db_path
 from web.lite_bootstrap import bootstrap_lite_database
 from web.models import db
+from web.models.scheduler.scheduler_log import SchedulerLog
+from web.scheduler import scheduler_listener
 
 
 def _cleanup_scheduler_singleton() -> None:
@@ -167,6 +171,31 @@ def test_lite_scheduler_jobs_route_handles_empty_scheduler_log_table(
         assert isinstance(payload["data"], list)
     finally:
         _dispose_app(app)
+
+
+def test_lite_scheduler_listener_persists_error_exception_as_text(lite_app):
+    event = JobExecutionEvent(
+        EVENT_JOB_ERROR,
+        "demo-job",
+        "default",
+        datetime(2026, 3, 22, 16, 1, 44),
+        exception=TimeoutError("boom"),
+        traceback="traceback text",
+    )
+
+    scheduler_listener(event)
+
+    with lite_app.app_context():
+        record = (
+            db.session.query(SchedulerLog)
+            .filter(SchedulerLog.job_id == "demo-job")
+            .order_by(SchedulerLog.id.desc())
+            .first()
+        )
+
+        assert record is not None
+        assert record.exception == "boom"
+        assert record.traceback == "traceback text"
 
 
 def test_lite_scheduler_init_failure_does_not_mark_scheduler_available(

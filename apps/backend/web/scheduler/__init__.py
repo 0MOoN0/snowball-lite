@@ -651,7 +651,11 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
         """
         # 判断事件类型
         if isinstance(event, JobExecutionEvent) and event.code == EVENT_JOB_ERROR:
-            return event.exception, event.traceback
+            exception_msg = event.exception
+            return (
+                str(exception_msg) if exception_msg is not None else None,
+                event.traceback,
+            )
         else:
             return None, None
 
