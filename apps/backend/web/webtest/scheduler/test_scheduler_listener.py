@@ -10,6 +10,8 @@ from web.common.cons import webcons
 from web.models.scheduler.scheduler_log import SchedulerLog
 from web.scheduler import (
     _get_execution_persistence_strategy,
+    _get_execution_persistence_profile,
+    _get_registered_execution_persistence_profiles,
     _resolve_job_id,
     scheduler as scheduler_instance,
 )
@@ -169,6 +171,45 @@ class TestSchedulerComponents:
             _get_execution_persistence_strategy("AsyncTaskScheduler.consume_notification_outbox")
             == "signal_only"
         )
+
+    def test_execution_persistence_profile_registry_covers_lite_mainline_jobs(self):
+        registry = _get_registered_execution_persistence_profiles()
+        expected_job_ids = {
+            "AsyncTaskScheduler.consume_notification_outbox",
+            "notice_scheduler.cb_subscribe_today",
+            "notice_scheduler.cb_subscribe_tomorrow",
+            "notice_scheduler.daily_report",
+            "DataboxTestScheduler.test_databox_get_rt",
+            "analysis_scheduler.to_analysis_all_transaction",
+            "analysis_scheduler.analysis_all_the_time",
+            "AssetScheduler.update_asset_holding",
+            "AssetScheduler.update_fund_daily_data",
+            "AssetScheduler.update_stock_asset",
+            "AssetScheduler.monitor_grid_type_detail",
+            "GridTypeScheduler.grid_type_trade_analysis",
+            "GridStrategyScheduler.grid_strategy_trade_analysis",
+            "AssetScheduler.complement_asset_data",
+        }
+
+        assert set(registry) == expected_job_ids
+
+    def test_execution_persistence_profile_registry_marks_outbox_as_signal_only(self):
+        profile = _get_execution_persistence_profile(
+            "AsyncTaskScheduler.consume_notification_outbox"
+        )
+
+        assert profile.default_policy == "signal_only"
+        assert profile.supported_policies == ("full", "signal_only")
+        assert profile.switchable is True
+        assert "claimed" in profile.reason
+
+    def test_execution_persistence_profile_registry_keeps_daily_report_full(self):
+        profile = _get_execution_persistence_profile("notice_scheduler.daily_report")
+
+        assert profile.default_policy == "full"
+        assert profile.supported_policies == ("full",)
+        assert profile.switchable is False
+        assert "日报" in profile.reason
     
     def test_uuid_generation_uniqueness(self):
         """测试UUID生成的唯一性"""

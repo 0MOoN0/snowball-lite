@@ -2,8 +2,8 @@
 
 - source doc: `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/task/scheduler_execution_persistence/requirement.md`
 - current status: in_progress
-- current round: 1
-- current task: `02_task_classification`
+- current round: 2
+- current task: `03_state_storage_optimization`
 - report root: `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence`
 
 ## task status
@@ -11,8 +11,8 @@
 | task_id | status | depends_on | summary |
 | --- | --- | --- | --- |
 | 01_runtime_core | completed | - | 运行时策略基座与 outbox 首个接入 |
-| 02_task_classification | in_progress | 01_runtime_core | lite 主线任务策略归类与扩面 |
-| 03_state_storage_optimization | pending | 01_runtime_core | 状态表与事件日志分层 |
+| 02_task_classification | completed | 01_runtime_core | lite 主线任务策略归类与扩面 |
+| 03_state_storage_optimization | in_progress | 01_runtime_core | 状态表与事件日志分层 |
 | 04_persistence_api | pending | 02_task_classification | 策略覆盖持久化与后端接口 |
 | 05_frontend_settings | pending | 04_persistence_api | 前端单任务策略设置 |
 
@@ -25,6 +25,8 @@
 - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/execution-plan.md`
 - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/01_runtime_core/task-status.md`
 - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/01_runtime_core/round-01-review.md`
+- `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/02_task_classification/task-status.md`
+- `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/02_task_classification/round-01-review.md`
 
 ## commands run
 
@@ -38,13 +40,14 @@
 - `pytest apps/backend/web/webtest/lite/test_lite_notification_outbox.py -q`
 - `pytest apps/backend/web/webtest/scheduler/test_scheduler_listener.py -q`
 - `pytest apps/backend/web/webtest/lite/test_lite_scheduler_sqlite_support.py -q`
+- `python3 /Users/leon/.codex/skills/staged-code-review-tdd/scripts/capture_staged_snapshot.py --output-dir /private/tmp/codex-staged-review-1774188582`
+- `python3 /Users/leon/.codex/skills/staged-code-review-tdd/scripts/create_review_report.py --snapshot /private/tmp/codex-staged-review-1774188582/snapshot.json --output /Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/02_task_classification/round-01-review.md`
+- `python3 /Users/leon/.codex/skills/staged-code-review-tdd/scripts/validate_review_report.py --report /Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/02_task_classification/round-01-review.md`
 
 ## latest blockers
 
-- Task 2 要先把 lite 主线任务归类结果落清楚，再决定是否真的要扩 `signal_only` / `error_only`，不能为了“扩面”硬切策略。
-- Task 3 之后的 `/scheduler/jobs`、手动触发防重和策略展示仍会依赖旧日志表口径，状态表设计时必须保留最近提交时间语义。
+- Task 3 还没开始，需要先把状态表和事件日志拆层，再碰 `/scheduler/jobs` 和手动触发防重。
 
 ## next action
 
-- 派新的 implementer 做 `02_task_classification`：固化 lite 主线任务归类表，并只对已有明确信号的任务做最小扩面。
-- Task 2 完成后再做独立 review，随后进入状态表拆分任务。
+- 派新的 implementer 做 `03_state_storage_optimization`：先把状态表和事件日志拆层，再改读路径。

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import traceback
 import logging
+from dataclasses import dataclass
 
 import sqlalchemy
 from apscheduler.events import *
@@ -30,10 +31,132 @@ from web.scheduler import notice_scheduler
 # 全局变量，跟踪调度器是否已经初始化
 _scheduler_initialized = False
 
-_EXECUTION_PERSISTENCE_DEFAULT_STRATEGY = "full"
+_EXECUTION_PERSISTENCE_FULL_STRATEGY = "full"
 _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY = "signal_only"
-_EXECUTION_PERSISTENCE_STRATEGY_REGISTRY: dict[str, str] = {
-    "AsyncTaskScheduler.consume_notification_outbox": _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY,
+_EXECUTION_PERSISTENCE_ERROR_ONLY_STRATEGY = "error_only"
+_EXECUTION_PERSISTENCE_AVAILABLE_STRATEGIES = (
+    _EXECUTION_PERSISTENCE_FULL_STRATEGY,
+    _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY,
+    _EXECUTION_PERSISTENCE_ERROR_ONLY_STRATEGY,
+)
+
+
+@dataclass(frozen=True)
+class ExecutionPersistenceProfile:
+    default_policy: str
+    supported_policies: tuple[str, ...]
+    switchable: bool
+    reason: str
+
+
+def _build_execution_persistence_profile(
+    default_policy: str,
+    supported_policies: tuple[str, ...],
+    switchable: bool,
+    reason: str,
+) -> ExecutionPersistenceProfile:
+    return ExecutionPersistenceProfile(
+        default_policy=default_policy,
+        supported_policies=supported_policies,
+        switchable=switchable,
+        reason=reason,
+    )
+
+
+_EXECUTION_PERSISTENCE_DEFAULT_PROFILE = _build_execution_persistence_profile(
+    default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+    supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+    switchable=False,
+    reason="未命中注册任务时继续沿用 full，避免误伤现有 scheduler 行为",
+)
+_EXECUTION_PERSISTENCE_PROFILE_REGISTRY: dict[str, ExecutionPersistenceProfile] = {
+    "AsyncTaskScheduler.consume_notification_outbox": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY,
+        supported_policies=(
+            _EXECUTION_PERSISTENCE_FULL_STRATEGY,
+            _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY,
+        ),
+        switchable=True,
+        reason="返回 stats.claimed，能稳定判断是否真的处理了业务信号；空轮询不应写成功日志",
+    ),
+    "notice_scheduler.cb_subscribe_today": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="成功与否取决于发行列表和通知发送链路，当前没有结构化业务信号可供安全收口",
+    ),
+    "notice_scheduler.cb_subscribe_tomorrow": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="成功与否取决于发行列表和通知发送链路，当前没有结构化业务信号可供安全收口",
+    ),
+    "notice_scheduler.daily_report": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="日报任务是聚合型输出，当前只具备日志语义，不具备可稳定判定的业务信号",
+    ),
+    "DataboxTestScheduler.test_databox_get_rt": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="成功只记日志、失败才发通知，但当前还没有足够证据把它安全收口为 error_only",
+    ),
+    "analysis_scheduler.to_analysis_all_transaction": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="分析任务只写入过程日志，当前没有返回可测试的成功信号",
+    ),
+    "analysis_scheduler.analysis_all_the_time": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="一次性全量分析更适合保留完整执行轨迹，当前没有收口依据",
+    ),
+    "AssetScheduler.update_asset_holding": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="任务内部有处理数量，但没有稳定返回值供 listener 判断业务信号",
+    ),
+    "AssetScheduler.update_fund_daily_data": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="任务内部有新增记录数日志，但没有稳定返回值供 listener 判断业务信号",
+    ),
+    "AssetScheduler.update_stock_asset": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="任务内部有新增股票代码数日志，但没有稳定返回值供 listener 判断业务信号",
+    ),
+    "AssetScheduler.monitor_grid_type_detail": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="监控任务会产生命中/未命中变化，但当前不返回可测试的结构化业务结果",
+    ),
+    "GridTypeScheduler.grid_type_trade_analysis": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="分析任务只写日志，没有结构化成功信号",
+    ),
+    "GridStrategyScheduler.grid_strategy_trade_analysis": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="分析任务只写日志，没有结构化成功信号",
+    ),
+    "AssetScheduler.complement_asset_data": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="补全任务只写日志，没有结构化成功信号",
+    ),
 }
 
 
@@ -158,13 +281,21 @@ def _get_cache_client_or_none():
         return None
 
 
-def _get_execution_persistence_strategy(job_id: str | None) -> str:
+def _get_execution_persistence_profile(job_id: str | None) -> ExecutionPersistenceProfile:
     if not job_id:
-        return _EXECUTION_PERSISTENCE_DEFAULT_STRATEGY
-    return _EXECUTION_PERSISTENCE_STRATEGY_REGISTRY.get(
+        return _EXECUTION_PERSISTENCE_DEFAULT_PROFILE
+    return _EXECUTION_PERSISTENCE_PROFILE_REGISTRY.get(
         job_id,
-        _EXECUTION_PERSISTENCE_DEFAULT_STRATEGY,
+        _EXECUTION_PERSISTENCE_DEFAULT_PROFILE,
     )
+
+
+def _get_registered_execution_persistence_profiles() -> dict[str, ExecutionPersistenceProfile]:
+    return dict(_EXECUTION_PERSISTENCE_PROFILE_REGISTRY)
+
+
+def _get_execution_persistence_strategy(job_id: str | None) -> str:
+    return _get_execution_persistence_profile(job_id).default_policy
 
 
 def _is_manual_job_id(raw_job_id: str | None) -> bool:
@@ -189,13 +320,23 @@ def _has_business_signal(execution_event: JobExecutionEvent) -> bool:
 
 
 def _should_persist_execution_event(
-    job_id: str,
+    profile: ExecutionPersistenceProfile,
     execution_event: JobExecutionEvent,
 ) -> bool:
-    strategy = _get_execution_persistence_strategy(job_id)
-    if strategy != _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY:
+    if profile.default_policy == _EXECUTION_PERSISTENCE_FULL_STRATEGY:
         return True
-    return _has_business_signal(execution_event)
+    if profile.default_policy == _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY:
+        return _has_business_signal(execution_event)
+    return False
+
+
+def _should_persist_submission_event(
+    profile: ExecutionPersistenceProfile,
+    is_manual_job: bool,
+) -> bool:
+    if is_manual_job:
+        return True
+    return profile.default_policy == _EXECUTION_PERSISTENCE_FULL_STRATEGY
 
 
 def _attach_run_log_buffer(job_id: str, scheduled_run_time) -> None:
@@ -584,6 +725,7 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
     job_id_for_persist: str | None = None
     run_time_for_persist = None
     job_id_resolved = _resolve_job_id(callback_event)
+    execution_profile = _get_execution_persistence_profile(job_id_resolved)
     is_manual_job = _is_manual_job_id(job_id_str)
 
     if callback_event.code == EVENT_JOB_SUBMITTED:
@@ -665,19 +807,17 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
 
         """
         job_id = job_id_resolved
-        strategy = _get_execution_persistence_strategy(job_id)
         if (
             execution_event.code == EVENT_JOB_SUBMITTED
-            and strategy == _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY
-            and not is_manual_job
+            and not _should_persist_submission_event(execution_profile, is_manual_job)
         ):
             debug(
-                "APScheduler事件: SUBMITTED 命中 signal_only 策略且不是手动触发，跳过落库"
+                "APScheduler事件: SUBMITTED 命中非 full 策略且不是手动触发，跳过落库"
             )
             return
         if (
             execution_event.code == EVENT_JOB_EXECUTED
-            and not _should_persist_execution_event(job_id, execution_event)
+            and not _should_persist_execution_event(execution_profile, execution_event)
         ):
             debug(
                 "APScheduler事件: EXECUTED 命中 signal_only 策略且未发现业务信号，跳过落库"
