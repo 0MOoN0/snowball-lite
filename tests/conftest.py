@@ -4,8 +4,9 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+BACKEND_WORKSPACE = REPO_ROOT / "apps" / "backend"
+if str(BACKEND_WORKSPACE) not in sys.path:
+    sys.path.insert(0, str(BACKEND_WORKSPACE))
 
 from web.webtest.lite_runtime_fixtures import (
     _lite_default_runtime_paths,

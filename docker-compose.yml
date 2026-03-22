@@ -4,11 +4,12 @@ services:
   web:
     build: .
     container_name: snow
+    working_dir: /app/apps/backend
     restart: no
     ports:
       - "5001:5001"
     environment:
-      - FLASK_APP=application.py
+      - FLASK_APP=web.application:app
       - SNOW_APP_STATUS=dev
       - FLASK_DEBUG=False
       - pushplus=${pushplus}
@@ -27,7 +28,7 @@ services:
       - DEV_REDIS_PORT=${STG_REDIS_PORT}
       - DEV_REDIS_PASSWORD=${STG_REDIS_PASSWORD}
     volumes:
-      - /mnt/d/DevFiles/docker_data/snowball/logs:/app/weblogs
+      - /mnt/d/DevFiles/docker_data/snowball/logs:/app/apps/backend/weblogs
     networks:
       - snowball
     command: gunicorn web.application:app -c ./web/gunicorn.config.py
