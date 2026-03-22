@@ -14,6 +14,11 @@ def _lite_default_runtime_paths(tmp_path_factory):
     cache_sqlite_path = root / "pytest-lite_xalpha_cache.db"
     old_env = {
         "LITE_DB_PATH": os.environ.get("LITE_DB_PATH"),
+        "LITE_ENABLE_PERSISTENT_JOBSTORE": os.environ.get(
+            "LITE_ENABLE_PERSISTENT_JOBSTORE"
+        ),
+        "LITE_ENABLE_SCHEDULER": os.environ.get("LITE_ENABLE_SCHEDULER"),
+        "LITE_SCHEDULER_DB_PATH": os.environ.get("LITE_SCHEDULER_DB_PATH"),
         "LITE_XALPHA_CACHE_DIR": os.environ.get("LITE_XALPHA_CACHE_DIR"),
         "LITE_XALPHA_CACHE_BACKEND": os.environ.get("LITE_XALPHA_CACHE_BACKEND"),
         "LITE_XALPHA_CACHE_SQLITE_PATH": os.environ.get("LITE_XALPHA_CACHE_SQLITE_PATH"),
@@ -21,6 +26,9 @@ def _lite_default_runtime_paths(tmp_path_factory):
     }
 
     os.environ["LITE_DB_PATH"] = str(db_path)
+    os.environ["LITE_ENABLE_PERSISTENT_JOBSTORE"] = "true"
+    os.environ["LITE_ENABLE_SCHEDULER"] = "true"
+    os.environ.pop("LITE_SCHEDULER_DB_PATH", None)
     os.environ["LITE_XALPHA_CACHE_DIR"] = str(root / "pytest-lite_xalpha_cache")
     os.environ["LITE_XALPHA_CACHE_BACKEND"] = "sql"
     os.environ["LITE_XALPHA_CACHE_SQLITE_PATH"] = str(cache_sqlite_path)
@@ -43,6 +51,9 @@ def lite_runtime_paths(tmp_path, monkeypatch):
     cache_sqlite_path = tmp_path / "pytest-lite_xalpha_cache.db"
 
     monkeypatch.setenv("LITE_DB_PATH", str(db_path))
+    monkeypatch.setenv("LITE_ENABLE_PERSISTENT_JOBSTORE", "true")
+    monkeypatch.setenv("LITE_ENABLE_SCHEDULER", "true")
+    monkeypatch.delenv("LITE_SCHEDULER_DB_PATH", raising=False)
     monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", str(cache_dir))
     monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "sql")
     monkeypatch.setenv("LITE_XALPHA_CACHE_SQLITE_PATH", str(cache_sqlite_path))

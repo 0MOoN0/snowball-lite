@@ -43,8 +43,8 @@
 - `apps/backend/web/docs/环境变量配置指南.md`
 - `apps/backend/web/docs/技术总结.md`
 - `apps/backend/web/docs/轻量版分支改造方案.md`
-- `apps/backend/web/docs/desc/lite_project/00_repo_baseline.md`
-- `apps/backend/web/docs/desc/lite_project/01_lite_vs_mysql_component_matrix.md`
+- `apps/backend/web/docs/desc/lite_migration/project/00_repo_baseline.md`
+- `apps/backend/web/docs/desc/lite_migration/project/01_lite_vs_mysql_component_matrix.md`
 
 ## 明确保留的边界
 

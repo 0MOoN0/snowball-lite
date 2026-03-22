@@ -1,4 +1,11 @@
-# xalpha 独立 SQLite cache 任务设计
+# xalpha 独立 SQLite cache 收口（归档）
+
+## 归档状态
+
+- 状态：已完成
+- 原任务路径：`/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/xalpha_independent_sqlite_cache_strategy.md`
+- 说明：这份文档已从 `task/` 归档到 `desc/lite_migration/project/`，保留完整设计、实现和验收结论
+- 当前事实：lite 默认使用独立 SQLite cache，显式 `csv` fallback 仍保留；长期运行口径以 `README.md` 和 `docs/backend/runtime-config.md` 为准
 
 ## Checklist
 

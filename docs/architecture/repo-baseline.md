@@ -73,4 +73,4 @@ backend 文档采用“长期说明上收、执行档案原地保留”的口径
 - [Architecture Docs README](README.md)
 - [Backend System Overview](../backend/system-overview.md)
 - [Runtime Config](../backend/runtime-config.md)
-- 历史归档：`apps/backend/web/docs/desc/lite_project/00_repo_baseline.md`
+- 历史归档：`apps/backend/web/docs/desc/lite_migration/project/00_repo_baseline.md`

@@ -4,7 +4,8 @@
 
 - 状态：已完成
 - 原任务路径：`/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/lite_scheduler_integration_strategy.md`
-- 说明：这份文档已从 `task/` 归档到 `desc/lite_project/`，保留完整设计、实现和验收结论
+- 说明：这份文档已从 `task/` 归档到 `desc/lite_migration/project/`，保留完整设计、实现和验收结论
+- 后续更新：当前默认口径已经从“lite 默认内存 jobstore”切到“lite 默认开启持久化 jobstore”；当前事实以 `README.md` 和 `docs/backend/` 下的长期文档为准
 
 ## Checklist
 

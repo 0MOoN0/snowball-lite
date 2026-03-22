@@ -11,7 +11,7 @@
 
 ## 阶段二归档
 
-阶段二现在统一归档在 `web/docs/desc/lite_stage2/`：
+阶段二现在统一归档在 `web/docs/desc/lite_migration/stage2/`：
 
 - `01_real_databox_validation.md`
 - `02_sqlite_high_risk_models.md`

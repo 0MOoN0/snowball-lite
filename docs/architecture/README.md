@@ -16,4 +16,4 @@
 ## 归档参考
 
 - `apps/backend/web/docs/轻量版分支改造方案.md`
-- `apps/backend/web/docs/desc/lite_project/00_repo_baseline.md`
+- `apps/backend/web/docs/desc/lite_migration/project/00_repo_baseline.md`

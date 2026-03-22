@@ -17,6 +17,7 @@ from urllib.parse import quote_plus
 from web.common.utils.backend_paths import (
     ensure_test_lite_db_path_isolated,
     get_default_lite_db_path,
+    get_default_lite_scheduler_db_path,
     get_default_lite_xalpha_cache_dir,
     get_default_lite_xalpha_cache_sqlite_path,
     get_default_xalpha_cache_dir,
@@ -473,7 +474,7 @@ class LiteConfig(Config):
     """
     轻量模式配置：
     - 默认使用 SQLite
-    - 默认关闭 Redis / Dramatiq / profiler，默认开启 APScheduler 内存模式
+    - 默认关闭 Redis / Dramatiq / profiler，默认开启 APScheduler 持久化模式
     - 保留最小数据库与 API 启动能力，并把 scheduler 收口成 lite 默认主链路
     """
 
@@ -501,8 +502,13 @@ class LiteConfig(Config):
     ENABLE_REDIS = False
     ENABLE_TASK_QUEUE = False
     ENABLE_SCHEDULER = True
-    ENABLE_PERSISTENT_JOBSTORE = False
-    LITE_SCHEDULER_DB_PATH = None
+    ENABLE_PERSISTENT_JOBSTORE = True
+    LITE_SCHEDULER_DB_PATH = _normalize_path(
+        os.environ.get(
+            "LITE_SCHEDULER_DB_PATH",
+            str(get_default_lite_scheduler_db_path(LITE_DB_PATH)),
+        )
+    )
     ENABLE_PROFILER = False
     ENABLE_XALPHA_SQL_CACHE = True
     ENABLE_ENGINE_LOG = False
@@ -521,7 +527,9 @@ class LiteConfig(Config):
     )
 
     REDIS_CLIENT = {}
-    SCHEDULER_JOBSTORES = {}
+    SCHEDULER_JOBSTORES = {
+        "default": build_sqlite_jobstore_config(LITE_SCHEDULER_DB_PATH)
+    }
     FLASK_PROFILER = {
         "enabled": False,
         "storage": {"engine": "memory"},
@@ -607,13 +615,14 @@ def apply_runtime_overrides(app, config_name: str) -> None:
     lite_scheduler_db_path = (
         _normalize_path(lite_scheduler_db_path_raw)
         if lite_scheduler_db_path_raw
-        else None
+        else str(get_default_lite_scheduler_db_path(lite_db_path))
     )
 
     app.config["ENABLE_SCHEDULER"] = lite_scheduler_enabled
     app.config["ENABLE_PERSISTENT_JOBSTORE"] = bool(
         lite_scheduler_enabled and lite_persistent_jobstore
     )
+    app.config["LITE_SCHEDULER_DB_PATH"] = lite_scheduler_db_path
 
     if app.config["ENABLE_PERSISTENT_JOBSTORE"]:
         if not lite_scheduler_db_path:
@@ -621,10 +630,8 @@ def apply_runtime_overrides(app, config_name: str) -> None:
         if lite_scheduler_db_path == lite_db_path:
             raise ValueError("LITE_SCHEDULER_DB_PATH 不能与 LITE_DB_PATH 指向同一个文件")
         Path(lite_scheduler_db_path).parent.mkdir(parents=True, exist_ok=True)
-        app.config["LITE_SCHEDULER_DB_PATH"] = lite_scheduler_db_path
         app.config["SCHEDULER_JOBSTORES"] = {
             "default": build_sqlite_jobstore_config(lite_scheduler_db_path)
         }
     else:
-        app.config["LITE_SCHEDULER_DB_PATH"] = lite_scheduler_db_path
         app.config.pop("SCHEDULER_JOBSTORES", None)

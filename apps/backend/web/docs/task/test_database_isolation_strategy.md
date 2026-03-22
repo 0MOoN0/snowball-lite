@@ -28,7 +28,7 @@
    - 历史 MySQL fixtures 已接入测试库名保护，误配成业务库名时直接失败
    - 依赖 MySQL fixtures 的 `webtest` 现在会自动打上 `mysql_integration` 标记
    - 默认 pytest 收集会把这批 MySQL 测试排除；显式 `pytest -m mysql_integration` 时才会收集
-   - 这部分落地情况已经归档到 `apps/backend/web/docs/desc/lite_project/05_lite_database_layering_strategy.md`
+   - 这部分落地情况已经归档到 `apps/backend/web/docs/desc/lite_migration/project/05_lite_database_layering_strategy.md`
 
 2. 未完成
    - 仓库还没有把 SQLite 默认层 / MySQL 兼容层拆成单独 CI job

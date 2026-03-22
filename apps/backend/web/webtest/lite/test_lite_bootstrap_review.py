@@ -9,6 +9,7 @@ import pytest
 
 from web.common.cache import cache
 from web.common.utils.backend_paths import get_repo_root
+from web.lite_bootstrap import get_lite_head_revision
 from web.scheduler import _resolve_job_id
 
 
@@ -102,7 +103,7 @@ def test_lite_bootstrap_survives_blocked_mysql_and_optional_infra_packages(tmp_p
             os.environ["LITE_XALPHA_CACHE_BACKEND"] = "csv"
 
             from web import create_app
-            from web.lite_bootstrap import bootstrap_lite_database
+            from web.lite_bootstrap import bootstrap_lite_database, get_lite_head_revision
             from web.models import db
 
             app = create_app("lite")
@@ -119,9 +120,10 @@ def test_lite_bootstrap_survives_blocked_mysql_and_optional_infra_packages(tmp_p
                     foreign_keys = conn.execute(text("PRAGMA foreign_keys")).scalar()
                     journal_mode = conn.execute(text("PRAGMA journal_mode")).scalar()
 
-                assert version == "lite_stage3_baseline"
+                assert version == get_lite_head_revision()
                 assert "tb_asset" in table_names
                 assert "tb_record" in table_names
+                assert "tb_apscheduler_log" in table_names
                 assert foreign_keys == 1
                 assert str(journal_mode).lower() == "wal"
                 print(
@@ -142,7 +144,7 @@ def test_lite_bootstrap_survives_blocked_mysql_and_optional_infra_packages(tmp_p
 
     assert result.returncode == 0, result.stderr
     assert "LITE_BOOTSTRAP_OK" in result.stdout
-    assert '"version": "lite_stage3_baseline"' in result.stdout
+    assert f'"version": "{get_lite_head_revision()}"' in result.stdout
 
 
 def test_lite_application_bootstraps_database_when_imported(tmp_path: pathlib.Path) -> None:
@@ -183,9 +185,12 @@ def test_lite_application_bootstraps_database_when_imported(tmp_path: pathlib.Pa
                 version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
 
             assert lite_application.app.config["_config_name"] == "lite"
-            assert version == "lite_stage3_baseline"
+            from web.lite_bootstrap import get_lite_head_revision
+
+            assert version == get_lite_head_revision()
             assert "tb_asset" in table_names
             assert "tb_record" in table_names
+            assert "tb_apscheduler_log" in table_names
             print(json.dumps({{"version": version, "table_count": len(table_names)}}))
             print("LITE_APPLICATION_OK")
             """
@@ -194,7 +199,7 @@ def test_lite_application_bootstraps_database_when_imported(tmp_path: pathlib.Pa
 
     assert result.returncode == 0, result.stderr
     assert "LITE_APPLICATION_OK" in result.stdout
-    assert '"version": "lite_stage3_baseline"' in result.stdout
+    assert f'"version": "{get_lite_head_revision()}"' in result.stdout
 
 
 def test_lite_gunicorn_check_config_passes(tmp_path: pathlib.Path) -> None:

@@ -35,7 +35,7 @@
 
 - 后端旧系统说明：`[apps/backend/web/docs/系统说明.md](../apps/backend/web/docs/系统说明.md)`
 - 后端旧环境说明：`[apps/backend/web/docs/环境变量配置指南.md](../apps/backend/web/docs/环境变量配置指南.md)`
-- lite 仓库旧 baseline：`[apps/backend/web/docs/desc/lite_project/00_repo_baseline.md](../apps/backend/web/docs/desc/lite_project/00_repo_baseline.md)`
+- lite 仓库旧 baseline：`[apps/backend/web/docs/desc/lite_migration/project/00_repo_baseline.md](../apps/backend/web/docs/desc/lite_migration/project/00_repo_baseline.md)`
 - lite 改造方案：`[apps/backend/web/docs/轻量版分支改造方案.md](../apps/backend/web/docs/轻量版分支改造方案.md)`
 - 前端工作区说明：`[apps/frontend/README.md](../apps/frontend/README.md)`
 - `xalpha` 文档入口：`[doc/source/index.rst](../doc/source/index.rst)`

@@ -12,6 +12,7 @@ except ImportError:  # pragma: no cover - Windows 下没有 fcntl
 
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 
 from web.common.enum.version_enum import VersionKeyEnum
 from web.common.utils.backend_paths import (
@@ -26,6 +27,7 @@ from web.common.utils.enum_utils import record_enum_version_to_sqlite
 LITE_BASELINE_REVISION = "lite_stage3_baseline"
 LITE_STAGE5_REQUIRED_TABLES = {
     "tb_asset",
+    "tb_apscheduler_log",
     "tb_asset_code",
     "tb_asset_fund_daily_data",
     "tb_asset_fund_fee_rule",
@@ -52,6 +54,12 @@ LITE_STAGE3_REQUIRED_TABLES = LITE_STAGE5_REQUIRED_TABLES
 
 def get_lite_migration_directory() -> Path:
     return get_migration_directory_by_env("lite")
+
+
+def get_lite_head_revision() -> str:
+    config = Config()
+    config.set_main_option("script_location", str(get_lite_migration_directory()))
+    return ScriptDirectory.from_config(config).get_current_head()
 
 
 def migrate_legacy_repo_data(
@@ -151,7 +159,7 @@ def build_lite_alembic_config(app) -> Config:
 
 
 def _get_expected_revision(revision: str) -> str:
-    return LITE_BASELINE_REVISION if revision == "head" else revision
+    return get_lite_head_revision() if revision == "head" else revision
 
 
 def _get_sqlite_table_names(db_path: Path) -> set[str]:

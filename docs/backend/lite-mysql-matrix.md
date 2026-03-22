@@ -16,8 +16,8 @@
 | MySQL server 依赖 | 默认存在 | 默认不存在 | lite 主线已经脱离 MySQL server |
 | Redis 缓存 | 默认启用 | 默认关闭 | 由 `LiteConfig.ENABLE_REDIS = False` 控制 |
 | Dramatiq 任务队列 | 默认启用 | 默认关闭 | lite 默认不启动异步任务队列 |
-| APScheduler 调度器 | 默认启用 | 默认启用（默认内存模式） | 可显式关闭 `LITE_ENABLE_SCHEDULER=false` |
-| APScheduler 持久化 JobStore | 默认启用 | 默认关闭 | lite scheduler 默认只跑内存模式，持久化仍需显式开启 |
+| APScheduler 调度器 | 默认启用 | 默认启用（默认持久化模式） | 可显式关闭 `LITE_ENABLE_SCHEDULER=false` |
+| APScheduler 持久化 JobStore | 默认启用 | 默认启用 | 默认落到独立 SQLite 文件；可显式关闭回内存模式 |
 | flask-profiler | 可启用 | 默认关闭 | lite 默认不跑性能分析工具 |
 | xalpha SQL 缓存 | 默认走 SQL 缓存库 | 改成目录型 `csv` 缓存 | 不再把 `snowball_data` 这类 SQL 缓存库当主线前提 |
 | `databox` 启动初始化 | 视缓存而定 | 默认跳过 | 因为 lite 默认不开 Redis |

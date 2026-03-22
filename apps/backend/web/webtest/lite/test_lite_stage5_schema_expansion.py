@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import pytest
+from alembic import command
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import inspect, text
 
 from web import create_app
 from web.common.enum.asset_enum import AssetTypeEnum
 from web.common.enum.business.index.index_enum import IndexTypeEnum
-from web.lite_bootstrap import LITE_STAGE5_REQUIRED_TABLES, bootstrap_lite_database
+from web.lite_bootstrap import (
+    LITE_STAGE5_REQUIRED_TABLES,
+    build_lite_alembic_config,
+    bootstrap_lite_database,
+    get_lite_head_revision,
+)
 from web.models import db
 from web.models.asset.asset_fund import AssetFundETF, AssetFundLOF
 from web.models.index.index_stock import StockIndex
@@ -21,6 +27,7 @@ def test_lite_bootstrap_stage5_builds_core_schema(tmp_path, monkeypatch):
     monkeypatch.setenv("LITE_DB_PATH", str(db_path))
     monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", str(cache_dir))
     monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "csv")
+    monkeypatch.setenv("LITE_ENABLE_SCHEDULER", "false")
 
     app = create_app("lite")
 
@@ -33,9 +40,10 @@ def test_lite_bootstrap_stage5_builds_core_schema(tmp_path, monkeypatch):
         with engine.connect() as conn:
             version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
 
-        assert version == "lite_stage3_baseline"
+        assert version == get_lite_head_revision()
         assert LITE_STAGE5_REQUIRED_TABLES.issubset(table_names)
         assert {
+            "tb_apscheduler_log",
             "system_settings",
             "tb_notification",
             "tb_index_base",
@@ -45,6 +53,49 @@ def test_lite_bootstrap_stage5_builds_core_schema(tmp_path, monkeypatch):
             "tb_category",
             "tb_asset_category",
         }.issubset(table_names)
+
+    db.session.remove()
+    for engine in db.engines.values():
+        engine.dispose()
+
+
+def test_lite_bootstrap_upgrades_existing_stage3_baseline_to_current_head(
+    tmp_path,
+    monkeypatch,
+):
+    db_path = tmp_path / "snowball_lite.db"
+    cache_dir = tmp_path / "lite_xalpha_cache"
+    monkeypatch.setenv("LITE_DB_PATH", str(db_path))
+    monkeypatch.setenv("LITE_XALPHA_CACHE_DIR", str(cache_dir))
+    monkeypatch.setenv("LITE_XALPHA_CACHE_BACKEND", "csv")
+    monkeypatch.setenv("LITE_ENABLE_SCHEDULER", "false")
+
+    app = create_app("lite")
+
+    with app.app_context():
+        command.upgrade(build_lite_alembic_config(app), "lite_stage3_baseline")
+
+        engine = db.engines["snowball"]
+        table_names_before = set(inspect(engine).get_table_names())
+        assert "tb_apscheduler_log" not in table_names_before
+
+        with engine.connect() as conn:
+            version_before = conn.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar()
+
+        assert version_before == "lite_stage3_baseline"
+
+        bootstrap_lite_database(app)
+
+        table_names_after = set(inspect(engine).get_table_names())
+        with engine.connect() as conn:
+            version_after = conn.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar()
+
+        assert "tb_apscheduler_log" in table_names_after
+        assert version_after == get_lite_head_revision()
 
     db.session.remove()
     for engine in db.engines.values():

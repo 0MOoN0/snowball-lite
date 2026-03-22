@@ -6,7 +6,7 @@
 
 - 后端工作区从 `apps/backend/` 进入，真实代码位于 `apps/backend/web/`
 - lite 是默认主线，默认运行口径是 `SNOW_APP_STATUS=lite` + SQLite
-- MySQL、Redis、Dramatiq、APScheduler 持久化和 profiler 相关能力仍然保留在仓库里，但默认不属于 lite 主线前提
+- MySQL、Redis、Dramatiq 和 profiler 相关能力仍然保留在仓库里；APScheduler 持久化已经收口进 lite 默认主线，但继续和业务库分离
 - 当前可以说“lite 的 SQLite 可信度已经明显提升”，不能说“整个仓库已经完成 SQLite 迁移”
 
 ## 关键目录
@@ -19,7 +19,7 @@
 | `apps/backend/web/models/` | SQLAlchemy 模型，继续沿用 `__bind_key__` 体系 |
 | `apps/backend/web/services/` | 业务逻辑主落点，新逻辑优先放这里 |
 | `apps/backend/web/routers/` | API 路由层，当前以 Flask-RESTX 为主 |
-| `apps/backend/web/scheduler/` | APScheduler 相关能力，lite 默认开启，默认内存模式 |
+| `apps/backend/web/scheduler/` | APScheduler 相关能力，lite 默认开启，默认持久化到独立 SQLite 文件 |
 | `apps/backend/web/task/` | Dramatiq 任务队列相关能力，lite 默认关闭 |
 | `apps/backend/web/webtest/` | Web 层、服务层、模型层和 lite 主线集成验证 |
 | `tests/` | lite 链路、bootstrap、`xalpha` 兼容和仓库级补充测试 |
@@ -39,10 +39,10 @@ lite 下默认运行开关：
 - `ENABLE_REDIS = False`
 - `ENABLE_TASK_QUEUE = False`
 - `ENABLE_SCHEDULER = True`
-- `ENABLE_PERSISTENT_JOBSTORE = False`
+- `ENABLE_PERSISTENT_JOBSTORE = True`
 - `ENABLE_PROFILER = False`
 
-如果确实要在 lite 下临时关闭 scheduler，需要额外设置 `LITE_ENABLE_SCHEDULER=false`；如果还要持久化 JobStore，再加 `LITE_ENABLE_PERSISTENT_JOBSTORE=true` 和独立的 `LITE_SCHEDULER_DB_PATH`。
+如果确实要在 lite 下临时关闭 scheduler，需要额外设置 `LITE_ENABLE_SCHEDULER=false`；如果要临时切回内存 JobStore，再加 `LITE_ENABLE_PERSISTENT_JOBSTORE=false`。默认持久化文件会按 `LITE_DB_PATH` 派生到同级 `scheduler/` 子目录。
 
 ## API 和代码组织约定
 

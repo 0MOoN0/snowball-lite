@@ -8,6 +8,8 @@ import sqlalchemy
 
 import web
 from web import create_app
+from web.common.utils.backend_paths import get_default_lite_scheduler_db_path
+from web.lite_bootstrap import bootstrap_lite_database
 from web.models import db
 
 
@@ -56,9 +58,21 @@ def test_lite_scheduler_enabled_by_default_starts_runtime_and_routes(lite_runtim
 
     try:
         assert app.config["ENABLE_SCHEDULER"] is True
-        assert app.config["ENABLE_PERSISTENT_JOBSTORE"] is False
+        assert app.config["ENABLE_PERSISTENT_JOBSTORE"] is True
         assert app.config["SCHEDULER_AVAILABLE"] is True
+        assert app.config["LITE_SCHEDULER_DB_PATH"] == str(
+            get_default_lite_scheduler_db_path(lite_runtime_paths["db_path"])
+        )
         assert "/scheduler" in _scheduler_routes(app)
+
+        engine = sqlalchemy.create_engine(
+            f"sqlite:///{app.config['LITE_SCHEDULER_DB_PATH']}"
+        )
+        try:
+            inspector = sqlalchemy.inspect(engine)
+            assert inspector.has_table("apscheduler_jobs") is True
+        finally:
+            engine.dispose()
     finally:
         _dispose_app(app)
 
@@ -78,7 +92,7 @@ def test_lite_scheduler_can_be_disabled_explicitly(lite_runtime_paths, monkeypat
 
 def test_lite_scheduler_memory_mode_starts_without_jobstores(lite_runtime_paths, monkeypatch):
     monkeypatch.setenv("LITE_ENABLE_SCHEDULER", "true")
-    monkeypatch.delenv("LITE_ENABLE_PERSISTENT_JOBSTORE", raising=False)
+    monkeypatch.setenv("LITE_ENABLE_PERSISTENT_JOBSTORE", "false")
     monkeypatch.delenv("LITE_SCHEDULER_DB_PATH", raising=False)
 
     app = create_app("lite")
@@ -86,6 +100,9 @@ def test_lite_scheduler_memory_mode_starts_without_jobstores(lite_runtime_paths,
     try:
         assert app.config["ENABLE_SCHEDULER"] is True
         assert app.config["ENABLE_PERSISTENT_JOBSTORE"] is False
+        assert app.config["LITE_SCHEDULER_DB_PATH"] == str(
+            get_default_lite_scheduler_db_path(lite_runtime_paths["db_path"])
+        )
         assert "SCHEDULER_JOBSTORES" not in app.config
         assert app.config["SCHEDULER_AVAILABLE"] is True
         assert "/scheduler" in _scheduler_routes(app)
@@ -131,6 +148,25 @@ def test_lite_scheduler_persistent_mode_rejects_same_sqlite_file(
 
     with pytest.raises(ValueError, match="LITE_SCHEDULER_DB_PATH 不能与 LITE_DB_PATH 指向同一个文件"):
         create_app("lite")
+
+
+def test_lite_scheduler_jobs_route_handles_empty_scheduler_log_table(
+    lite_runtime_paths,
+):
+    app = create_app("lite")
+
+    try:
+        with app.app_context():
+            bootstrap_lite_database(app)
+
+        response = app.test_client().get("/scheduler/jobs")
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert payload["success"] is True
+        assert isinstance(payload["data"], list)
+    finally:
+        _dispose_app(app)
 
 
 def test_lite_scheduler_init_failure_does_not_mark_scheduler_available(

@@ -21,7 +21,7 @@
 - `web/webtest/conftest.py`
 - 核心 router / service 文件
 - `web/docs/轻量版分支改造方案.md`
-- `web/docs/desc/lite_stage1/*.md`
+- `web/docs/desc/lite_migration/stage1/*.md`
 
 ## 推荐验证接口
 

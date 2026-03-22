@@ -38,6 +38,31 @@ def get_default_lite_dev_db_path() -> Path:
     return get_lite_runtime_root() / "snowball_lite_dev.db"
 
 
+def get_default_lite_scheduler_dir(lite_db_path: str | Path | None = None) -> Path:
+    base_db_path = (
+        Path(lite_db_path).expanduser().resolve()
+        if lite_db_path is not None
+        else get_default_lite_db_path().resolve()
+    )
+    return base_db_path.parent / "scheduler"
+
+
+def get_default_lite_scheduler_db_path(lite_db_path: str | Path | None = None) -> Path:
+    base_db_path = (
+        Path(lite_db_path).expanduser().resolve()
+        if lite_db_path is not None
+        else get_default_lite_db_path().resolve()
+    )
+    suffix = base_db_path.suffix or ".db"
+    return get_default_lite_scheduler_dir(base_db_path) / (
+        f"{base_db_path.stem}_scheduler{suffix}"
+    )
+
+
+def get_default_lite_dev_scheduler_db_path() -> Path:
+    return get_default_lite_scheduler_db_path(get_default_lite_dev_db_path())
+
+
 def get_long_lived_lite_db_paths() -> set[Path]:
     return {
         get_default_lite_db_path().resolve(),

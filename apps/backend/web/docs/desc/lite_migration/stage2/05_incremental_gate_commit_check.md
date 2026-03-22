@@ -12,15 +12,15 @@
 - `tests/test_lite_sqlite_high_risk_models.py`
 - `tests/test_lite_real_databox_validation.py`
 - `web/lite_validation.py`
-- `web/docs/desc/lite_project/00_repo_baseline.md`
-- `web/docs/desc/lite_stage2/*.md`
+- `web/docs/desc/lite_migration/project/00_repo_baseline.md`
+- `web/docs/desc/lite_migration/stage2/*.md`
 - `web/docs/轻量版分支改造方案.md`
 
 ## 参考文档
 
-- `web/docs/desc/lite_stage2/00_stage2_overview.md`
-- `web/docs/desc/lite_stage2/02_sqlite_blockers.md`
-- `web/docs/desc/lite_stage2/04_stage2_acceptance_and_decision.md`
+- `web/docs/desc/lite_migration/stage2/00_stage2_overview.md`
+- `web/docs/desc/lite_migration/stage2/02_sqlite_blockers.md`
+- `web/docs/desc/lite_migration/stage2/04_stage2_acceptance_and_decision.md`
 
 ## 执行命令
 

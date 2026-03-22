@@ -6,7 +6,7 @@
 - 优先级：中
 - 前置：
   - Task 03 已完成
-  - `web/docs/desc/lite_project/03_backend_workspace_consolidation.md` 已完成
+  - `web/docs/desc/lite_migration/project/03_backend_workspace_consolidation.md` 已完成
 - 目标：把当前后端从“根目录承载”迁成 `apps/backend`
 
 ## 归档结论

@@ -54,7 +54,7 @@
 - `web/__init__.py`
 - `web/routers/__init__.py`
 - `web/docs/轻量版分支改造方案.md`
-- `web/docs/desc/lite_stage5/04_lite_runtime_dependency_boundary.md`
-- `web/docs/desc/lite_stage6/00_stage6_overview.md`
-- `web/docs/desc/lite_stage6/05_stage6_acceptance_and_decision.md`
+- `web/docs/desc/lite_migration/stage5/04_lite_runtime_dependency_boundary.md`
+- `web/docs/desc/lite_migration/stage6/00_stage6_overview.md`
+- `web/docs/desc/lite_migration/stage6/05_stage6_acceptance_and_decision.md`
 - `web/docs/mysql_to_sqlite_analysis.md`
