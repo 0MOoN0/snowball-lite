@@ -46,6 +46,7 @@ LITE_STAGE5_REQUIRED_TABLES = {
     "tb_index_stock",
     "tb_index_alias",
     "tb_notification",
+    "tb_notification_outbox",
     "system_settings",
 }
 

@@ -190,6 +190,7 @@ uv run --no-dev python -m web.lite_application
 - Lite 模式只保证最小启动链路，不等同于完整生产能力
 - lite 下 `/system/token`、`databox` 启动期 token 注入都走 SQLite `system_settings`
 - lite 下通知发送和资产初始化默认不要求 Redis / Dramatiq；需要延迟能力时优先走 scheduler
+- lite 首批“网格策略监控确认通知”已经改成 SQLite outbox 落库，再由 APScheduler 周期消费
 - lite 默认开启 scheduler；如果需要临时关闭，可设置 `LITE_ENABLE_SCHEDULER=false`
 - lite 默认开启持久化 jobstore；如果需要临时切回内存模式，可设置 `LITE_ENABLE_PERSISTENT_JOBSTORE=false`
 - 如果需要覆盖默认持久化文件位置，再设置 `LITE_SCHEDULER_DB_PATH=/absolute/path/to/lite_scheduler.db`

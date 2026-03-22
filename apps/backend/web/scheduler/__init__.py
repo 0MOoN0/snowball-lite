@@ -23,6 +23,7 @@ from web.weblogger import debug, error, info, warning
 # 导入所有scheduler模块以注册定时任务
 from web.scheduler import asset_scheduler
 from web.scheduler import analysis_scheduler
+from web.scheduler import async_task_scheduler
 from web.scheduler import databox_test_scheduler
 from web.scheduler import notice_scheduler
 

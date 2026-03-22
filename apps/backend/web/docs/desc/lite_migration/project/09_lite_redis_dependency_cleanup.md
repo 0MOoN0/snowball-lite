@@ -91,8 +91,9 @@
 ### 5.4 通知与任务队列
 lite 下不再启动 Dramatiq worker，通知链路按下面口径收口：
 1. 通知发送保留“优先 actor、失败回退 sync”的现状
-2. lite 下直接走同步发送，不再把 Redis broker 当运行前提
-3. 需要重试或延迟的通知任务，改由 scheduler 负责补位，不重新引入 Redis
+2. lite 下不再把 Redis broker 当运行前提，默认继续允许同步 fallback
+3. 首批“网格策略监控确认通知”已经切到 SQLite outbox，再由 APScheduler 周期消费
+4. 其它需要重试或延迟的通知任务，后续继续优先走 scheduler 补位，不重新引入 Redis
 ### 5.5 资产初始化链路
 资产新增后现在还有 `init_asset.send_with_options(...)` 这类队列型调用。
 lite 下选定方案：

@@ -20,6 +20,9 @@ from web.models.notice.Notification import Notification
 from web.models.record.record import Record
 from web.scheduler.base import scheduler
 from web.scheduler.notification_dispatch import dispatch_notification
+from web.services.async_task.notification_outbox_service import (
+    notification_outbox_service,
+)
 from web.services.analysis.transaction_analysis_service import GridStrategyTransactionAnalysisService, \
     GridTypeTransactionAnalysisService, TradeAnalysisService
 from web.services.grid.grid_service import GridService
@@ -971,13 +974,23 @@ def _make_grid_monitor_notification(grid_type_info_list: List[Dict]):
             content=notification_content,
             title='网格交易确认通知')
 
-        sent, channel = dispatch_notification(notification)
+        sent, channel = _deliver_grid_monitor_notification(notification)
         if sent:
             if channel == "actor":
                 logger.info('网格交易确认通知发送成功')
+            elif channel == "outbox":
+                logger.info('网格交易确认通知已写入 lite outbox，等待 scheduler 消费')
             else:
                 logger.info('网格交易确认通知同步发送成功')
         else:
             logger.error('网格交易确认通知发送失败')
     except Exception as e:
         logger.exception(f'发送网格交易确认通知异常: {str(e)}')
+
+
+def _deliver_grid_monitor_notification(notification: Notification):
+    if notification_outbox_service.is_lite_runtime():
+        notification_outbox_service.enqueue_notification(notification)
+        return True, "outbox"
+
+    return dispatch_notification(notification)
