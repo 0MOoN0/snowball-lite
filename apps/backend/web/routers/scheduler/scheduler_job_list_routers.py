@@ -5,9 +5,9 @@ from flask_restful import Resource, Api
 from pandas import DataFrame
 
 from web.common.utils import R
-from web.models import db
 from web.models.scheduler.scheduler_job_info import SchedulerJobInfo, SchedulerJobInfoSchema
 from web.models.scheduler.scheduler_log import SchedulerLog, SchedulerLogSchema
+from web.models.scheduler.scheduler_job_state import SchedulerJobStateSchema
 from web.scheduler import scheduler
 from web.services.scheduler.scheduler_service import scheduler_service
 
@@ -33,14 +33,46 @@ class SchedulerJobListRouter(Resource):
         """
         scheduler_job_list = SchedulerJobInfo.from_apscheduler_job_list(scheduler.get_jobs())
         jobs_df = DataFrame(SchedulerJobInfoSchema().dump(scheduler_job_list, many=True))
-        # 查询最新的任务日志执行数据
-        sub_query = SchedulerLog.query.order_by(SchedulerLog.scheduler_run_time.desc(),
-                                                SchedulerLog.execution_state.desc()).limit(1000).subquery()
-        latest_log: list[SchedulerLog] = db.session.query(sub_query).group_by(sub_query.c.job_id).all()
-        if latest_log:
-            latest_log_df = DataFrame(SchedulerLogSchema().dump(latest_log, many=True))
-            # 根据job_id进行左外连接
-            jobs_df: DataFrame = pd.merge(left=jobs_df, right=latest_log_df, how='left', on='job_id')
+        job_ids = jobs_df["job_id"].tolist() if not jobs_df.empty else []
+        latest_states = scheduler_service.get_job_states_by_ids(job_ids)
+        latest_logs = scheduler_service.get_latest_job_logs_by_ids(job_ids)
+
+        if latest_states:
+            latest_state_df = DataFrame(
+                SchedulerJobStateSchema().dump(latest_states, many=True)
+            ).rename(
+                columns={
+                    "last_execution_state": "state_execution_state",
+                    "last_scheduler_run_time": "state_scheduler_run_time",
+                }
+            )
+            jobs_df = pd.merge(
+                left=jobs_df,
+                right=latest_state_df,
+                how="left",
+                on="job_id",
+            )
+
+        if latest_logs:
+            latest_log_df = DataFrame(SchedulerLogSchema().dump(latest_logs, many=True)).rename(
+                columns={
+                    "execution_state": "log_execution_state",
+                    "scheduler_run_time": "log_scheduler_run_time",
+                }
+            )
+            jobs_df = pd.merge(left=jobs_df, right=latest_log_df, how='left', on='job_id')
+
+        if not jobs_df.empty:
+            jobs_df["execution_state"] = jobs_df.get("state_execution_state")
+            jobs_df["scheduler_run_time"] = jobs_df.get("state_scheduler_run_time")
+            if "log_execution_state" in jobs_df:
+                jobs_df["execution_state"] = jobs_df["execution_state"].fillna(
+                    jobs_df["log_execution_state"]
+                )
+            if "log_scheduler_run_time" in jobs_df:
+                jobs_df["scheduler_run_time"] = jobs_df["scheduler_run_time"].fillna(
+                    jobs_df["log_scheduler_run_time"]
+                )
             # 查询计算各个任务的成功率
             success_count_res = scheduler_service.get_job_counts(SchedulerLog.get_scheduler_state_enum().EXECUTED.value)
             failed_count_res = scheduler_service.get_job_counts(SchedulerLog.get_scheduler_state_enum().ERROR.value)
@@ -58,7 +90,25 @@ class SchedulerJobListRouter(Resource):
                 count_merge_df['failed_count'] + count_merge_df['success_count'], fill_value=None)
             count_merge_df = count_merge_df[['job_id', 'success_rate']]
             jobs_df = jobs_df.merge(count_merge_df, how='left', on='job_id')
-            jobs_df.drop([SchedulerLog.create_time.key, SchedulerLog.update_time.key, 'id'], axis=1, inplace=True)
+            drop_columns = [
+                "id",
+                SchedulerLog.create_time.key,
+                SchedulerLog.update_time.key,
+                "state_execution_state",
+                "state_scheduler_run_time",
+                "log_execution_state",
+                "log_scheduler_run_time",
+                "last_submitted_time",
+                "last_finished_time",
+                "last_signal_run_time",
+                "last_error",
+                "last_error_time",
+            ]
+            jobs_df.drop(
+                [column for column in drop_columns if column in jobs_df.columns],
+                axis=1,
+                inplace=True,
+            )
             jobs_df['success_rate'].fillna(0, inplace=True)
             jobs_df['success_rate'] = jobs_df['success_rate'].apply(lambda x: '{:.2%}'.format(x))
             # 需要考虑处理nan问题，否则序列化时字符会被转义

@@ -44,6 +44,7 @@ def test_lite_bootstrap_stage5_builds_core_schema(tmp_path, monkeypatch):
         assert LITE_STAGE5_REQUIRED_TABLES.issubset(table_names)
         assert {
             "tb_apscheduler_log",
+            "tb_apscheduler_job_state",
             "system_settings",
             "tb_notification",
             "tb_index_base",
@@ -78,6 +79,7 @@ def test_lite_bootstrap_upgrades_existing_stage3_baseline_to_current_head(
         engine = db.engines["snowball"]
         table_names_before = set(inspect(engine).get_table_names())
         assert "tb_apscheduler_log" not in table_names_before
+        assert "tb_apscheduler_job_state" not in table_names_before
 
         with engine.connect() as conn:
             version_before = conn.execute(
@@ -95,6 +97,7 @@ def test_lite_bootstrap_upgrades_existing_stage3_baseline_to_current_head(
             ).scalar()
 
         assert "tb_apscheduler_log" in table_names_after
+        assert "tb_apscheduler_job_state" in table_names_after
         assert version_after == get_lite_head_revision()
 
     db.session.remove()

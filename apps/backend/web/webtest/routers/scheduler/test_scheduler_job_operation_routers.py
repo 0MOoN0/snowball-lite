@@ -74,9 +74,9 @@ class TestSchedulerJobRunRouters:
     @patch('web.routers.scheduler.scheduler_job_operation_routers.build_manual_job_id')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.cache')
-    @patch('web.routers.scheduler.scheduler_job_operation_routers.SchedulerLog')
+    @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler_service')
     @patch('web.routers.scheduler.scheduler_job_operation_routers._get_parse')
-    def test_put_method_basic_functionality(self, mock_get_parse, mock_scheduler_log, mock_cache, mock_scheduler, mock_build_manual_job_id):
+    def test_put_method_basic_functionality(self, mock_get_parse, mock_scheduler_service, mock_cache, mock_scheduler, mock_build_manual_job_id):
         """测试put方法基本功能"""
         # 模拟_get_parse返回的parser
         mock_parser = Mock()
@@ -103,10 +103,8 @@ class TestSchedulerJobRunRouters:
         mock_scheduler.add_job.return_value = None
         mock_build_manual_job_id.return_value = "manual::mocked_uuid_str::dGVzdF9qb2JfaWQ"
 
-        # 模拟SchedulerLog查询，返回None表示没有最近的任务记录
-        mock_query = Mock()
-        mock_scheduler_log.query = mock_query
-        mock_query.filter.return_value.order_by.return_value.first.return_value = None
+        mock_scheduler_service.get_job_state.return_value = None
+        mock_scheduler_service.get_latest_job_log.return_value = None
         
         # 执行put方法
         result = self.router.put()
@@ -168,9 +166,9 @@ class TestSchedulerJobRunRouters:
     @patch('web.routers.scheduler.scheduler_job_operation_routers.build_manual_job_id')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.cache')
-    @patch('web.routers.scheduler.scheduler_job_operation_routers.SchedulerLog')
+    @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler_service')
     @patch('web.routers.scheduler.scheduler_job_operation_routers._get_parse')
-    def test_put_method_with_empty_args_kwargs(self, mock_get_parse, mock_scheduler_log, mock_cache, mock_scheduler, mock_build_manual_job_id):
+    def test_put_method_with_empty_args_kwargs(self, mock_get_parse, mock_scheduler_service, mock_cache, mock_scheduler, mock_build_manual_job_id):
         """测试put方法处理空参数的情况"""
         # 模拟_get_parse函数和参数解析
         mock_parser = Mock()
@@ -192,7 +190,8 @@ class TestSchedulerJobRunRouters:
         mock_scheduler.get_job.return_value = mock_job
         mock_scheduler.add_job.return_value = None
         mock_build_manual_job_id.return_value = "manual::mocked_uuid_str::dGVzdF9qb2JfaWQ"
-        mock_scheduler_log.query.filter.return_value.order_by.return_value.first.return_value = None
+        mock_scheduler_service.get_job_state.return_value = None
+        mock_scheduler_service.get_latest_job_log.return_value = None
 
         result = self.router.put()
         
@@ -217,9 +216,9 @@ class TestSchedulerJobRunRouters:
         assert decode_manual_job_id(manual_job_id) == "test_job_id"
         assert decode_manual_job_id("test_job_id") is None
     
-    @patch('web.routers.scheduler.scheduler_job_operation_routers.SchedulerLog')
+    @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler_service')
     @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler')
-    def test_scheduler_add_job_exception_handling(self, mock_scheduler, mock_scheduler_log):
+    def test_scheduler_add_job_exception_handling(self, mock_scheduler, mock_scheduler_service):
         """测试scheduler.add_job抛出异常时的处理"""
         with patch('web.routers.scheduler.scheduler_job_operation_routers.reqparse') as mock_reqparse:
             mock_parser = Mock()
@@ -231,7 +230,8 @@ class TestSchedulerJobRunRouters:
             mock_job = Mock()
             mock_job.func_ref = Mock(__name__='test_function')
             mock_scheduler.get_job.return_value = mock_job
-            mock_scheduler_log.query.filter.return_value.order_by.return_value.first.return_value = None
+            mock_scheduler_service.get_job_state.return_value = None
+            mock_scheduler_service.get_latest_job_log.return_value = None
 
             # 模拟add_job抛出异常
             mock_scheduler.add_job.side_effect = Exception("Scheduler error")
@@ -244,6 +244,36 @@ class TestSchedulerJobRunRouters:
             except Exception as e:
                 # 如果没有异常处理，至少验证异常被抛出
                 assert "Scheduler error" in str(e)
+
+    @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler_service')
+    @patch('web.routers.scheduler.scheduler_job_operation_routers._get_parse')
+    @patch('web.routers.scheduler.scheduler_job_operation_routers.scheduler')
+    def test_put_method_rejects_recent_submitted_job_state(
+        self,
+        mock_scheduler,
+        mock_get_parse,
+        mock_scheduler_service,
+    ):
+        mock_parser = Mock()
+        mock_get_parse.return_value = mock_parser
+
+        mock_args = {'job_id': 'test_job_id'}
+        mock_parsed_args = Mock()
+        mock_parsed_args.copy.return_value = mock_args
+        mock_parser.parse_args.return_value = mock_parsed_args
+
+        mock_job = Mock()
+        mock_job.func_ref = Mock(__name__='test_function')
+        mock_scheduler.get_job.return_value = mock_job
+
+        submitted_state = Mock()
+        submitted_state.last_execution_state = SchedulerLog.get_scheduler_state_enum().SUBMITTED.value
+        submitted_state.last_submitted_time = __import__("datetime").datetime.now()
+        mock_scheduler_service.get_job_state.return_value = submitted_state
+
+        result = self.router.put()
+
+        assert result['code'] != 20000
 
 
 class TestSchedulerJobOperationIntegration:

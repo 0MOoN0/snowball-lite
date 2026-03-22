@@ -16,9 +16,11 @@ from web import weblogger
 from web.common.cache import cache
 from web.common.cons import webcons
 from web.common.utils import R
+from web.models.scheduler.scheduler_job_state import SchedulerJobState
 from web.models.scheduler.scheduler_log import SchedulerLog
 from web.scheduler.base import scheduler
 from web.scheduler.manual_job_id import build_manual_job_id
+from web.services.scheduler.scheduler_service import scheduler_service
 
 scheduler_job_operation_bp = Blueprint(
     "scheduler_job_operation", __name__, url_prefix="/scheduler/job"
@@ -90,20 +92,22 @@ class SchedulerJobRunRouters(Resource):
         job = scheduler.get_job(args["job_id"])
         if job is None:
             return R.fail(msg="任务不存在")
-        # 查询最近一次的执行状态
-        job_log: SchedulerLog = (
-            SchedulerLog.query.filter(SchedulerLog.job_id == job_id)
-            .order_by(
-                SchedulerLog.scheduler_run_time.desc(),
-                SchedulerLog.execution_state.desc(),
-            )
-            .first()
-        )
+        job_state: SchedulerJobState | None = scheduler_service.get_job_state(job_id)
+        submitted_time = None
+        latest_execution_state = None
+        if job_state is not None:
+            submitted_time = job_state.last_submitted_time
+            latest_execution_state = job_state.last_execution_state
+        else:
+            job_log: SchedulerLog | None = scheduler_service.get_latest_job_log(job_id)
+            if job_log is not None:
+                submitted_time = job_log.create_time
+                latest_execution_state = job_log.execution_state
         # 如果最新提交的任务距离当前不超过15分钟，则返回失败
         if (
-            job_log is not None
-            and job_log.execution_state == job_log.get_scheduler_state_enum().SUBMITTED
-            and (datetime.now() - job_log.create_time).total_seconds()
+            submitted_time is not None
+            and latest_execution_state == SchedulerLog.get_scheduler_state_enum().SUBMITTED.value
+            and (datetime.now() - submitted_time).total_seconds()
             < webcons.SchedulerConstants.JOB_RESUBMIT_DELAY
         ):
             return R.fail(msg="存在已经提交的相同任务，无法重新提交")
