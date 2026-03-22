@@ -10,8 +10,8 @@
 - 类型：完整需求文档
 - 状态：需求已定义，按阶段落地
 - 交付方式：分阶段
-- 当前阶段：阶段 1，只交付策略基座和 `consume_notification_outbox` 首个接入
-- 当前阶段任务：`/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/scheduler_execution_persistence_policy.md`
+- 当前阶段：按 5 个 Task 依次落地
+- 当前主任务：`/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/scheduler_execution_persistence/01_runtime_core.md`
 - 最终目标：让 scheduler 是否落库由任务特征决定，而不是所有任务统一 append-only 写入
 
 ## 0. 先说当前结论
@@ -55,11 +55,11 @@
 
 ## 4. 非目标
 本需求不把下面这些事情算进完成条件：
-- 不把 `tb_apscheduler_log` 直接重构成“状态表 + 事件表”
 - 不做运行时动态配置化策略后台
 - 不清理历史 `tb_apscheduler_log` 记录
 - 不把 `tb_notification_outbox` 的保留期清理并入本需求
 - 不承诺所有历史 MySQL 环境都引入额外差异化策略
+- 不要求在 Task 1 就立刻完成状态表拆分和历史回填
 
 ## 5. 方案
 采用“任务级执行持久化策略”方案。
@@ -89,6 +89,12 @@
 - 业务事件数据归 `tb_notification_outbox` 等业务表
 - scheduler 运行观测归 `tb_apscheduler_log`
 
+推荐优化路径：
+- 现有 `tb_apscheduler_log` 更适合收口成 append-only 的 `job_event_log`
+- 如果要同时解决“最新状态查询”和“历史事件留痕”，推荐新增 `tb_apscheduler_job_state`
+- `tb_apscheduler_job_state` 每个 `job_id` 一条，负责最新状态、最近错误和防重口径
+- 这条路径单独拆到 Task 3，不并入当前 Task 1 的完成条件
+
 ## 7. API 与交互影响
 - `/scheduler/jobs` 仍可展示任务和最近一次已持久化记录
 - `/scheduler/job_log/<job_id>` 继续返回最近一条已持久化记录
@@ -106,9 +112,23 @@
 3. 如果后续要做保留期清理、归档或物理删除，另开任务
 
 ## 9. 分阶段计划
-- 阶段 1：交付策略基座，接入 `AsyncTaskScheduler.consume_notification_outbox`，验证 `signal_only` 能拦住空轮询成功记录
-- 阶段 2：盘点 lite 主线其它常驻任务，为适合的任务补 `signal_only` 或 `error_only`，不适合的继续走 `full`
-- 阶段 3：补文档、查询口径说明和必要测试，并评估是否单独立项做日志保留期清理
+- Task 1：运行时策略基座与 outbox 首个接入
+  `/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/scheduler_execution_persistence/01_runtime_core.md`
+- Task 2：lite 主线任务策略归类与扩面
+  `/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/scheduler_execution_persistence/02_task_classification.md`
+- Task 3：任务状态表与事件日志分层优化
+  `/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/scheduler_execution_persistence/03_state_storage_optimization.md`
+- Task 4：策略覆盖持久化与后端接口
+  `/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/scheduler_execution_persistence/04_persistence_api.md`
+- Task 5：前端单任务策略设置
+  `/Users/leon/projects/snowball-lite/apps/backend/web/docs/task/scheduler_execution_persistence/05_frontend_settings.md`
+
+顺序要求：
+1. 先完成 Task 1，证明策略基座可用
+2. 再做 Task 2，把 lite 主线任务完成策略归类
+3. 如果要解决当前日志表语义和查询成本问题，再做 Task 3
+4. 然后做 Task 4，把策略覆盖做成正式持久化能力
+5. 最后做 Task 5，把单任务设置开放到前端
 
 ## 10. 验收标准
 - listener 能按 `job_id` 命中策略并稳定工作
@@ -125,6 +145,6 @@
 
 ## 12. 后续边界
 下面这些问题需要明确保留为后续事项，不能混进本需求验收：
-1. `tb_apscheduler_log` 是否拆成状态表和事件表
+1. `tb_apscheduler_job_state` 是否正式引入并迁移读取路径
 2. 历史日志保留期和物理清理
 3. `tb_notification_outbox` 的成功/失败记录保留期
