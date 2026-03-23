@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta
 import sys
 from types import SimpleNamespace
@@ -22,6 +23,7 @@ from web.lite_bootstrap import bootstrap_lite_database
 from web.models import db
 from web.models.scheduler.scheduler_log import SchedulerLog
 from web.models.scheduler.scheduler_job_state import SchedulerJobState
+from web.models.setting.system_settings import Setting
 from web.scheduler import scheduler_listener
 from web.services.scheduler.scheduler_service import scheduler_service
 
@@ -231,6 +233,233 @@ def test_lite_scheduler_jobs_route_prefers_job_state_over_event_log(lite_runtime
         assert target_row["schedulerRunTime"].startswith("2026-03-22T16:01:44")
     finally:
         _dispose_app(app)
+
+
+def test_lite_scheduler_jobs_route_returns_execution_persistence_fields(
+    lite_runtime_paths,
+):
+    scheduled_run_time = datetime(2026, 3, 22, 16, 1, 44)
+    app = create_app("lite")
+
+    try:
+        fake_job = SimpleNamespace(
+            id="AsyncTaskScheduler.consume_notification_outbox",
+            kwargs={},
+            func_ref="web.scheduler.async_task_scheduler:consume_notification_outbox_job",
+            next_run_time=scheduled_run_time,
+            trigger="interval[0:01:00]",
+            name="lite 通知 outbox 消费（每分钟）",
+        )
+
+        with patch(
+            "web.routers.scheduler.scheduler_job_list_routers.scheduler.get_jobs",
+            return_value=[fake_job],
+        ), patch(
+            "web.routers.scheduler.scheduler_job_list_routers.scheduler_service.get_job_states_by_ids",
+            return_value=[],
+        ), patch(
+            "web.routers.scheduler.scheduler_job_list_routers.scheduler_service.get_latest_job_logs_by_ids",
+            return_value=[],
+        ), patch(
+            "web.routers.scheduler.scheduler_job_list_routers.scheduler_service.get_job_counts",
+            return_value=[],
+        ):
+            response = app.test_client().get("/scheduler/jobs")
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        target_row = payload["data"][0]
+        assert target_row["jobId"] == "AsyncTaskScheduler.consume_notification_outbox"
+        assert target_row["defaultPolicy"] == "signal_only"
+        assert target_row["effectivePolicy"] == "signal_only"
+        assert target_row["policySource"] == "default"
+        assert target_row["supportedPolicies"] == ["full", "signal_only"]
+    finally:
+        _dispose_app(app)
+
+
+def test_lite_scheduler_listener_uses_persisted_execution_policy_override(lite_app):
+    scheduled_run_time = datetime(2026, 3, 22, 16, 1, 44)
+    actual_finished_time = datetime(2026, 3, 22, 18, 0, 0)
+
+    with lite_app.app_context():
+        db.session.add(
+            Setting(
+                key="scheduler.execution_persistence_policies",
+                value=json.dumps(
+                    {
+                        "AsyncTaskScheduler.consume_notification_outbox": "full",
+                    },
+                    ensure_ascii=False,
+                ),
+                setting_type="json",
+                group="system",
+                description="scheduler execution persistence overrides",
+            )
+        )
+        db.session.commit()
+
+    with patch("web.scheduler.datetime", new=SimpleNamespace(now=lambda: actual_finished_time)):
+        scheduler_listener(
+            JobSubmissionEvent(
+                EVENT_JOB_SUBMITTED,
+                "AsyncTaskScheduler.consume_notification_outbox",
+                "default",
+                [scheduled_run_time],
+            )
+        )
+        scheduler_listener(
+            JobExecutionEvent(
+                EVENT_JOB_EXECUTED,
+                "AsyncTaskScheduler.consume_notification_outbox",
+                "default",
+                scheduled_run_time,
+                retval={
+                    "claimed": 0,
+                    "succeeded": 0,
+                    "retried": 0,
+                    "failed": 0,
+                    "skipped": 0,
+                },
+            )
+        )
+
+    with lite_app.app_context():
+        job_state = (
+            db.session.query(SchedulerJobState)
+            .filter(
+                SchedulerJobState.job_id
+                == "AsyncTaskScheduler.consume_notification_outbox"
+            )
+            .one()
+        )
+        event_log = (
+            db.session.query(SchedulerLog)
+            .filter(
+                SchedulerLog.job_id
+                == "AsyncTaskScheduler.consume_notification_outbox"
+            )
+            .order_by(SchedulerLog.id.desc())
+            .first()
+        )
+
+        assert job_state.last_signal_run_time == actual_finished_time
+        assert event_log is not None
+        assert event_log.execution_state == SchedulerLog.get_scheduler_state_enum().EXECUTED.value
+
+
+def test_lite_scheduler_execution_policy_routes_support_upsert_batch_and_delete(
+    lite_app,
+):
+    client = lite_app.test_client()
+
+    update_response = client.put(
+        "/scheduler/persistence-policies/batch",
+        data=json.dumps(
+            {
+                "items": [
+                    {
+                        "jobId": "AsyncTaskScheduler.consume_notification_outbox",
+                        "policy": "full",
+                    }
+                ]
+            }
+        ),
+        content_type="application/json",
+    )
+
+    assert update_response.status_code == 200
+    update_payload = update_response.get_json()
+    assert update_payload["success"] is True
+
+    with lite_app.app_context():
+        setting = Setting.query.filter_by(
+            key="scheduler.execution_persistence_policies"
+        ).first()
+        assert setting is not None
+        assert json.loads(setting.value) == {
+            "AsyncTaskScheduler.consume_notification_outbox": "full"
+        }
+
+    query_response = client.get("/scheduler/persistence-policies")
+    assert query_response.status_code == 200
+    query_payload = query_response.get_json()
+    assert query_payload["success"] is True
+    target_view = next(
+        item
+        for item in query_payload["data"]["items"]
+        if item["jobId"] == "AsyncTaskScheduler.consume_notification_outbox"
+    )
+    assert target_view["defaultPolicy"] == "signal_only"
+    assert target_view["effectivePolicy"] == "full"
+    assert target_view["policySource"] == "override"
+
+    delete_response = client.delete(
+        "/scheduler/persistence-policies/AsyncTaskScheduler.consume_notification_outbox"
+    )
+    assert delete_response.status_code == 200
+    delete_payload = delete_response.get_json()
+    assert delete_payload["success"] is True
+
+    with lite_app.app_context():
+        setting = Setting.query.filter_by(
+            key="scheduler.execution_persistence_policies"
+        ).first()
+        assert setting is None
+
+    query_response = client.get("/scheduler/persistence-policies")
+    query_payload = query_response.get_json()
+    target_view = next(
+        item
+        for item in query_payload["data"]["items"]
+        if item["jobId"] == "AsyncTaskScheduler.consume_notification_outbox"
+    )
+    assert target_view["effectivePolicy"] == "signal_only"
+    assert target_view["policySource"] == "default"
+
+
+def test_lite_scheduler_execution_policy_routes_reject_invalid_requests(lite_app):
+    client = lite_app.test_client()
+
+    unknown_job_response = client.put(
+        "/scheduler/persistence-policies",
+        data=json.dumps({"jobId": "unknown.job", "policy": "full"}),
+        content_type="application/json",
+    )
+    assert unknown_job_response.status_code == 200
+    unknown_job_payload = unknown_job_response.get_json()
+    assert unknown_job_payload["success"] is False
+    assert "unknown.job" in unknown_job_payload["message"]
+
+    invalid_policy_response = client.put(
+        "/scheduler/persistence-policies",
+        data=json.dumps(
+            {
+                "jobId": "AsyncTaskScheduler.consume_notification_outbox",
+                "policy": "drop_all",
+            }
+        ),
+        content_type="application/json",
+    )
+    assert invalid_policy_response.status_code == 200
+    invalid_policy_payload = invalid_policy_response.get_json()
+    assert invalid_policy_payload["success"] is False
+    assert "drop_all" in invalid_policy_payload["message"]
+
+    unswitchable_job_response = client.put(
+        "/scheduler/persistence-policies",
+        data=json.dumps(
+            {
+                "jobId": "notice_scheduler.daily_report",
+                "policy": "full",
+            }
+        ),
+        content_type="application/json",
+    )
+    assert unswitchable_job_response.status_code == 200
+    unswitchable_job_payload = unswitchable_job_response.get_json()
+    assert unswitchable_job_payload["success"] is False
+    assert "notice_scheduler.daily_report" in unswitchable_job_payload["message"]
 
 
 def test_lite_scheduler_service_latest_logs_by_ids_returns_every_requested_job_when_logs_are_dense(

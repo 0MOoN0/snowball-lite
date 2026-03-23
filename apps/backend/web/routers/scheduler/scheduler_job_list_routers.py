@@ -9,6 +9,9 @@ from web.models.scheduler.scheduler_job_info import SchedulerJobInfo, SchedulerJ
 from web.models.scheduler.scheduler_log import SchedulerLog, SchedulerLogSchema
 from web.models.scheduler.scheduler_job_state import SchedulerJobStateSchema
 from web.scheduler import scheduler
+from web.services.scheduler.scheduler_persistence_service import (
+    scheduler_persistence_service,
+)
 from web.services.scheduler.scheduler_service import scheduler_service
 
 scheduler_job_list_bp = Blueprint("scheduler_job_list", __name__, url_prefix="/scheduler/jobs")
@@ -34,6 +37,7 @@ class SchedulerJobListRouter(Resource):
         scheduler_job_list = SchedulerJobInfo.from_apscheduler_job_list(scheduler.get_jobs())
         jobs_df = DataFrame(SchedulerJobInfoSchema().dump(scheduler_job_list, many=True))
         job_ids = jobs_df["job_id"].tolist() if not jobs_df.empty else []
+        policy_view_map = scheduler_persistence_service.get_policy_view_map(job_ids)
         latest_states = scheduler_service.get_job_states_by_ids(job_ids)
         latest_logs = scheduler_service.get_latest_job_logs_by_ids(job_ids)
 
@@ -63,6 +67,18 @@ class SchedulerJobListRouter(Resource):
             jobs_df = pd.merge(left=jobs_df, right=latest_log_df, how='left', on='job_id')
 
         if not jobs_df.empty:
+            jobs_df["default_policy"] = jobs_df["job_id"].apply(
+                lambda job_id: policy_view_map.get(job_id, {}).get("defaultPolicy")
+            )
+            jobs_df["effective_policy"] = jobs_df["job_id"].apply(
+                lambda job_id: policy_view_map.get(job_id, {}).get("effectivePolicy")
+            )
+            jobs_df["policy_source"] = jobs_df["job_id"].apply(
+                lambda job_id: policy_view_map.get(job_id, {}).get("policySource")
+            )
+            jobs_df["supported_policies"] = jobs_df["job_id"].apply(
+                lambda job_id: policy_view_map.get(job_id, {}).get("supportedPolicies")
+            )
             jobs_df["execution_state"] = jobs_df.get("state_execution_state")
             jobs_df["scheduler_run_time"] = jobs_df.get("state_scheduler_run_time")
             if "log_execution_state" in jobs_df:
@@ -118,7 +134,11 @@ class SchedulerJobListRouter(Resource):
                 'next_run_time': 'nextRunTime',
                 'scheduler_run_time': 'schedulerRunTime',
                 'execution_state': 'executionState',
-                'success_rate': 'successRate'
+                'success_rate': 'successRate',
+                'default_policy': 'defaultPolicy',
+                'effective_policy': 'effectivePolicy',
+                'policy_source': 'policySource',
+                'supported_policies': 'supportedPolicies',
             }, inplace=True)
         data = jobs_df.to_dict(orient='records')
         return R.ok(data=data)

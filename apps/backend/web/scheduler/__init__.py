@@ -296,8 +296,33 @@ def _get_registered_execution_persistence_profiles() -> dict[str, ExecutionPersi
     return dict(_EXECUTION_PERSISTENCE_PROFILE_REGISTRY)
 
 
+def _get_effective_execution_persistence_profile(
+    job_id: str | None,
+) -> ExecutionPersistenceProfile:
+    profile = _get_execution_persistence_profile(job_id)
+
+    try:
+        from web.services.scheduler.scheduler_persistence_service import (
+            scheduler_persistence_service,
+        )
+
+        effective_policy = scheduler_persistence_service.get_effective_policy(job_id)
+    except Exception:
+        return profile
+
+    if effective_policy == profile.default_policy:
+        return profile
+
+    return _build_execution_persistence_profile(
+        default_policy=effective_policy,
+        supported_policies=profile.supported_policies,
+        switchable=profile.switchable,
+        reason=profile.reason,
+    )
+
+
 def _get_execution_persistence_strategy(job_id: str | None) -> str:
-    return _get_execution_persistence_profile(job_id).default_policy
+    return _get_effective_execution_persistence_profile(job_id).default_policy
 
 
 def _is_manual_job_id(raw_job_id: str | None) -> bool:
@@ -812,7 +837,7 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
     job_id_for_persist: str | None = None
     run_time_for_persist = None
     job_id_resolved = _resolve_job_id(callback_event)
-    execution_profile = _get_execution_persistence_profile(job_id_resolved)
+    execution_profile = _get_effective_execution_persistence_profile(job_id_resolved)
     is_manual_job = _is_manual_job_id(job_id_str)
 
     if callback_event.code == EVENT_JOB_SUBMITTED:

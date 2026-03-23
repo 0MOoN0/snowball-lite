@@ -79,12 +79,16 @@ def init_app(app):
         from web.routers.scheduler.scheduler_job_operation_routers import (
             scheduler_job_operation_bp,
         )
+        from web.routers.scheduler.scheduler_persistence_policy_routers import (
+            scheduler_persistence_policy_bp,
+        )
         from web.routers.scheduler.scheduler_routers import scheduler_bp
 
         app.register_blueprint(scheduler_bp)
         app.register_blueprint(scheduler_job_operation_bp)
         app.register_blueprint(scheduler_job_list_bp)
         app.register_blueprint(scheduler_job_log_bp)
+        app.register_blueprint(scheduler_persistence_policy_bp)
     else:
         app.logger.info("由于调度器未启用或初始化失败，跳过 scheduler 路由注册")
     # system
