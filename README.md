@@ -176,6 +176,26 @@ uv run --no-dev python -m web.lite_application
 docker compose up -d --build
 ```
 
+默认资源口径按“单用户运行”收敛为：
+
+- `backend` 运行容器：`512m`
+- `frontend` 运行容器：`128m`
+- 前端构建期 Node 堆：`1536m`
+
+如果机器内存更紧，或你想手动覆盖，可以在执行前临时传环境变量：
+
+```bash
+BACKEND_MEM_LIMIT=512m \
+FRONTEND_MEM_LIMIT=128m \
+FRONTEND_BUILD_NODE_OPTIONS=--max-old-space-size=1536 \
+docker compose up -d --build
+```
+
+要注意两件事：
+
+- `backend` / `frontend` 的 `mem_limit` 只限制运行容器，不限制镜像 build 阶段
+- 前端最吃内存的是 `vite build`，真正决定构建压力的是 `FRONTEND_BUILD_NODE_OPTIONS` 和宿主机可用内存
+
 如果你是在服务器上直接拉仓库代码再部署，而后端仍然沿用命名卷，可以用交互脚本：
 
 ```bash

@@ -5,6 +5,7 @@ services:
       dockerfile: docker/backend/Dockerfile
     container_name: snowball-lite-backend
     restart: unless-stopped
+    mem_limit: ${BACKEND_MEM_LIMIT:-512m}
     environment:
       TZ: Asia/Shanghai
       SNOW_APP_STATUS: lite
@@ -32,9 +33,10 @@ services:
         PNPM_VERSION: 10.28.2
         VITE_BUILD_MODE: lite
         VITE_SOURCEMAP: "false"
-        NODE_OPTIONS: --max-old-space-size=1536
+        NODE_OPTIONS: ${FRONTEND_BUILD_NODE_OPTIONS:---max-old-space-size=1536}
     container_name: snowball-lite-frontend
     restart: unless-stopped
+    mem_limit: ${FRONTEND_MEM_LIMIT:-128m}
     depends_on:
       - backend
     ports:
