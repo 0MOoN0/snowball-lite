@@ -8,7 +8,10 @@ class WebBaseException(Exception):
             self.code = code
         if msg:
             self.message = msg
-            super(WebBaseException, self).__init__()
+        super(WebBaseException, self).__init__(self.message)
+
+    def __str__(self):
+        return self.message
 
 
 class WebDataException(WebBaseException):
@@ -24,7 +27,7 @@ class WebDataException(WebBaseException):
             self.code = code
         if msg:
             self.message = msg
-            super(WebDataException, self).__init__()
+        super(WebDataException, self).__init__(code=code, msg=msg)
 
 
 class WebTaskException(WebBaseException):
@@ -37,7 +40,7 @@ class WebTaskException(WebBaseException):
             self.code = code
         if msg:
             self.message = msg
-            super(WebBaseException, self).__init__()
+        super(WebTaskException, self).__init__(code=code, msg=msg)
 
 
 class WebAnalyzerException(WebBaseException):
@@ -50,7 +53,7 @@ class WebAnalyzerException(WebBaseException):
             self.code = code
         if msg:
             self.message = msg
-            super(WebBaseException, self).__init__()
+        super(WebAnalyzerException, self).__init__(code=code, msg=msg)
 
 
 class NotificationRenderException(WebBaseException):
@@ -63,4 +66,4 @@ class NotificationRenderException(WebBaseException):
             self.code = code
         if msg:
             self.message = msg
-            super(WebBaseException, self).__init__()
+        super(NotificationRenderException, self).__init__(code=code, msg=msg)

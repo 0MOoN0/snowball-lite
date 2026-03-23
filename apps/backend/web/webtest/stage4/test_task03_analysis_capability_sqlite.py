@@ -3,10 +3,13 @@ from __future__ import annotations
 from datetime import date, datetime
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 import pytest
 
 from web.models import db
+from web.databox.adapter.data.xa_data_adapter import XaDataAdapter
+from web.models.analysis.amount_trade_analysis_data import AmountTradeAnalysisData
 from web.models.analysis.grid_trade_analysis_data import GridTradeAnalysisData
 from web.models.analysis.trade_analysis_data import TradeAnalysisData
 from web.models.asset.asset import Asset
@@ -17,9 +20,12 @@ from web.models.grid.GridTypeDetail import GridTypeDetail
 from web.models.grid.GridTypeRecord import GridTypeRecord
 from web.models.record.record import Record
 from web.services.analysis.transaction_analysis_service import (
+    AmountTransactionAnalysisService,
     GridTransactionAnalysisService,
     GridTypeTransactionAnalysisService,
+    GridStrategyTransactionAnalysisService,
 )
+from web.web_exception.WebException import WebAnalyzerException
 from web.webtest.test_base import TestBaseLiteWithRollback
 
 
@@ -140,6 +146,136 @@ class TestTask03AnalysisCapabilitySQLite(TestBaseLiteWithRollback):
         lite_rollback_session.flush()
 
         lite_rollback_session.commit()
+
+    def test_xa_data_adapter_trade_normalizes_numpy_asset_ids_before_lookup(self):
+        adapter = XaDataAdapter()
+
+        record_df = pd.DataFrame(
+            [
+                {
+                    "date": datetime.combine(self.analysis_date, datetime.min.time()),
+                    "value": 1.0,
+                    "share": 10,
+                    "fee": 0,
+                    "asset_id": np.int64(self.asset.id),
+                }
+            ]
+        )
+
+        with patch.object(adapter.record_adapter, "convert_record", return_value=record_df), \
+             patch.object(adapter.xa, "mul", return_value=object()) as mock_mul:
+            trade_id = adapter.trade([self.record])
+
+        assert trade_id in adapter.trade_cache
+        assert mock_mul.call_count == 1
+        istatus = mock_mul.call_args.kwargs["istatus"]
+        assert list(istatus["code"]) == ["000001"]
+        assert istatus["code"].isna().sum() == 0
+
+    def test_xa_data_adapter_trade_raises_clear_error_for_missing_asset_code(self):
+        adapter = XaDataAdapter()
+
+        record_df = pd.DataFrame(
+            [
+                {
+                    "date": datetime.combine(self.analysis_date, datetime.min.time()),
+                    "value": 1.0,
+                    "share": 10,
+                    "fee": 0,
+                    "asset_id": np.int64(999999),
+                }
+            ]
+        )
+
+        with patch.object(adapter.record_adapter, "convert_record", return_value=record_df):
+            with pytest.raises(
+                WebAnalyzerException,
+                match="asset_id \\[999999\\] 对应的雪球代码不存在",
+            ):
+                adapter.trade([self.record])
+
+    def _mock_summary(self, trade_id: int, fund_name: str = "阶段4分析基金"):
+        assert trade_id > 0
+        return _build_summary_frame(fund_name, "000001")
+
+    @patch("web.services.analysis.transaction_analysis_service.webutils.is_trading_day")
+    @patch("web.services.analysis.transaction_analysis_service.databox.remove_trade_cache")
+    @patch("web.services.analysis.transaction_analysis_service.databox.get_trade_fund_name")
+    @patch("web.services.analysis.transaction_analysis_service.databox.summary")
+    def test_amount_trade_analysis_uses_real_trade_id_in_sqlite(
+        self,
+        mock_summary,
+        mock_get_trade_fund_name,
+        mock_remove_cache,
+        mock_is_trading_day,
+    ):
+        mock_is_trading_day.return_value = True
+        mock_get_trade_fund_name.return_value = ("阶段4分析基金",)
+        mock_summary.side_effect = lambda trade_id, date=None: self._mock_summary(trade_id)
+
+        service = AmountTransactionAnalysisService()
+        service.trade_analysis(start=self.analysis_date, end=self.analysis_date)
+
+        assert mock_summary.call_count == 1
+        assert mock_remove_cache.call_count == 1
+        assert mock_get_trade_fund_name.call_count == 1
+        assert mock_summary.call_args.kwargs["trade_id"] > 0
+        assert AmountTradeAnalysisData.query.filter_by(
+            analysis_type=TradeAnalysisData.get_analysis_type_enum().AMOUNT.value,
+        ).count() == 1
+
+    @patch("web.services.analysis.transaction_analysis_service.webutils.is_trading_day")
+    @patch("web.services.analysis.transaction_analysis_service.databox.remove_trade_cache")
+    @patch("web.services.analysis.transaction_analysis_service.databox.get_trade_fund_name")
+    @patch("web.services.analysis.transaction_analysis_service.databox.summary")
+    def test_grid_type_trade_analysis_uses_real_trade_id_in_sqlite(
+        self,
+        mock_summary,
+        mock_get_trade_fund_name,
+        mock_remove_cache,
+        mock_is_trading_day,
+    ):
+        mock_is_trading_day.return_value = True
+        mock_get_trade_fund_name.return_value = ("阶段4分析基金",)
+        mock_summary.side_effect = lambda trade_id, date=None: self._mock_summary(trade_id)
+
+        service = GridTypeTransactionAnalysisService(grid_type_id=self.grid_type.id)
+        service.trade_analysis(start=self.analysis_date, end=self.analysis_date)
+
+        assert mock_summary.call_count == 1
+        assert mock_remove_cache.call_count == 1
+        assert mock_get_trade_fund_name.call_count == 1
+        assert mock_summary.call_args.kwargs["trade_id"] > 0
+        assert GridTradeAnalysisData.query.filter_by(
+            grid_type_id=self.grid_type.id,
+            business_type=GridTradeAnalysisData.get_business_type_enum().GRID_TYPE_ANALYSIS.value,
+        ).count() == 1
+
+    @patch("web.services.analysis.transaction_analysis_service.webutils.is_trading_day")
+    @patch("web.services.analysis.transaction_analysis_service.databox.remove_trade_cache")
+    @patch("web.services.analysis.transaction_analysis_service.databox.get_trade_fund_name")
+    @patch("web.services.analysis.transaction_analysis_service.databox.summary")
+    def test_grid_strategy_trade_analysis_uses_real_trade_id_in_sqlite(
+        self,
+        mock_summary,
+        mock_get_trade_fund_name,
+        mock_remove_cache,
+        mock_is_trading_day,
+    ):
+        mock_is_trading_day.return_value = True
+        mock_get_trade_fund_name.return_value = ("阶段4分析基金",)
+        mock_summary.side_effect = lambda trade_id, date=None: self._mock_summary(trade_id)
+
+        service = GridStrategyTransactionAnalysisService()
+        service.trade_analysis(start=self.analysis_date, end=self.analysis_date)
+
+        assert mock_summary.call_count == 1
+        assert mock_remove_cache.call_count == 1
+        assert mock_get_trade_fund_name.call_count == 1
+        assert mock_summary.call_args.kwargs["trade_id"] > 0
+        assert GridTradeAnalysisData.query.filter_by(
+            business_type=GridTradeAnalysisData.get_business_type_enum().GRID_STRATEGY_ANALYSIS.value
+        ).count() == 1
 
     @patch("web.services.analysis.transaction_analysis_service.webutils.is_trading_day")
     @patch("web.services.analysis.transaction_analysis_service.databox.trade")

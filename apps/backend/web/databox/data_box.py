@@ -298,12 +298,7 @@ class DataBox:
             返回该次交易的交易ID，此后可以通过该ID获取相关数据，如果交易分析失败，返回-1
         """
         with self.lock:
-            try:
-                cache_id = self.xa_adapter.trade(records)
-                return cache_id
-            except Exception as e:
-                error('调用交易接口失败 ， 请检查数据， 错误信息: %s' % e, exc_info=True)
-                return -1
+            return self.xa_adapter.trade(records)
 
     def remove_trade_cache(self, trade_id: int):
         """

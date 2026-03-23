@@ -167,13 +167,23 @@ class XaDataAdapter(DataBoxDataAdapter, XaService):
 
         """
         record_df = self.record_adapter.convert_record(records)
+        raw_asset_ids = [int(asset_id) for asset_id in pd.unique(record_df["asset_id"].dropna())]
         # 获取基金代码
-        asset_codes: List[AssetCode] = AssetCode.query.filter(AssetCode.asset_id.in_(record_df.asset_id.unique())).all()
+        asset_codes: List[AssetCode] = AssetCode.query.filter(
+            AssetCode.asset_id.in_(raw_asset_ids)
+        ).all()
         # 高效地将asset_id映射为code_xq
         asset_code_map = {
             asset_code.asset_id: asset_code.code_xq
             for asset_code in asset_codes if asset_code.code_xq
         }
+        missing_asset_ids = [
+            asset_id for asset_id in raw_asset_ids if asset_id not in asset_code_map
+        ]
+        if missing_asset_ids:
+            raise WebAnalyzerException(
+                msg=f"asset_id {missing_asset_ids} 对应的雪球代码不存在"
+            )
         record_df['asset_id'] = record_df['asset_id'].map(asset_code_map)
         record_df.rename(columns={'asset_id': 'code'}, inplace=True)
         trade_result = self.xa.mul(istatus=record_df)
