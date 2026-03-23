@@ -974,7 +974,7 @@ class MysqlToSqliteBusinessMigrationService:
     def _build_target_app(self, target_sqlite: Path) -> Flask:
         app = Flask("mysql-to-sqlite-business-migration")
         runtime_cache_dir = target_sqlite.parent / "lite_xalpha_cache"
-        runtime_cache_sqlite = target_sqlite.parent / "lite_xalpha_cache.db"
+        runtime_cache_sqlite = runtime_cache_dir / "lite_xalpha_cache.db"
 
         old_env = {
             "LITE_DB_PATH": os.environ.get("LITE_DB_PATH"),

@@ -93,7 +93,7 @@ def get_default_lite_xalpha_cache_dir() -> Path:
 
 
 def get_default_lite_xalpha_cache_sqlite_path() -> Path:
-    return get_lite_runtime_root() / "lite_xalpha_cache.db"
+    return get_default_lite_xalpha_cache_dir() / "lite_xalpha_cache.db"
 
 
 def get_default_xalpha_cache_dir() -> Path:

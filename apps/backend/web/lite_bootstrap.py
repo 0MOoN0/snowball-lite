@@ -107,8 +107,6 @@ def migrate_legacy_repo_data(
                 moved.append((src_cache_dir, target_cache_dir))
 
     return {"moved": moved, "skipped": skipped}
-
-
 def ensure_lite_runtime_paths(app) -> dict[str, Path]:
     db_path = Path(app.config["LITE_DB_PATH"]).resolve()
     cache_dir = Path(app.config["XALPHA_CACHE_DIR"]).resolve()

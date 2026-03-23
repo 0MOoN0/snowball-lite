@@ -1,0 +1,159 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Snowball Lite (Prod DB)",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "module": "web.lite_application",
+      "cwd": "${workspaceFolder}/apps/backend",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "SNOW_APP_STATUS": "lite",
+        "OBJC_DISABLE_INITIALIZE_FORK_SAFETY": "YES",
+        "LITE_DB_PATH": "${workspaceFolder}/apps/backend/web/data/lite_runtime/snowball_lite.db",
+        "LITE_XALPHA_CACHE_BACKEND": "sql",
+        "LITE_ENABLE_XALPHA_SQL_CACHE": "true",
+        "LITE_XALPHA_CACHE_SQLITE_PATH": "${workspaceFolder}/apps/backend/web/data/lite_runtime/lite_xalpha_cache/lite_xalpha_cache.db",
+        "LITE_FLASK_PORT": "5002"
+      }
+    },
+    {
+      "name": "Snowball Lite (Prod DB, Gunicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "program": "${workspaceFolder}/.venv/bin/gunicorn",
+      "cwd": "${workspaceFolder}/apps/backend",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "gevent": true,
+      "subProcess": true,
+      "args": [
+        "-c",
+        "${workspaceFolder}/apps/backend/web/gunicorn_lite.config.py",
+        "web.lite_application:app"
+      ],
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "SNOW_APP_STATUS": "lite",
+        "OBJC_DISABLE_INITIALIZE_FORK_SAFETY": "YES",
+        "LITE_DB_PATH": "${workspaceFolder}/apps/backend/web/data/lite_runtime/snowball_lite.db",
+        "LITE_XALPHA_CACHE_BACKEND": "sql",
+        "LITE_ENABLE_XALPHA_SQL_CACHE": "true",
+        "LITE_XALPHA_CACHE_SQLITE_PATH": "${workspaceFolder}/apps/backend/web/data/lite_runtime/lite_xalpha_cache/lite_xalpha_cache.db",
+        "LITE_FLASK_PORT": "5002"
+      }
+    },
+    {
+      "name": "Snowball Lite (Dev DB)",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "module": "web.lite_application",
+      "cwd": "${workspaceFolder}/apps/backend",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "SNOW_APP_STATUS": "lite",
+        "OBJC_DISABLE_INITIALIZE_FORK_SAFETY": "YES",
+        "LITE_DB_PATH": "${workspaceFolder}/apps/backend/web/data/lite_runtime/snowball_lite_dev.db",
+        "LITE_XALPHA_CACHE_BACKEND": "sql",
+        "LITE_ENABLE_XALPHA_SQL_CACHE": "true",
+        "LITE_XALPHA_CACHE_SQLITE_PATH": "${workspaceFolder}/apps/backend/web/data/lite_runtime/lite_xalpha_cache/lite_xalpha_cache_dev.db",
+        "LITE_FLASK_PORT": "5003"
+      }
+    },
+    {
+      "name": "Snowball Lite (Dev DB, Gunicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "program": "${workspaceFolder}/.venv/bin/gunicorn",
+      "cwd": "${workspaceFolder}/apps/backend",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "gevent": true,
+      "subProcess": true,
+      "args": [
+        "-c",
+        "${workspaceFolder}/apps/backend/web/gunicorn_lite.config.py",
+        "web.lite_application:app"
+      ],
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "SNOW_APP_STATUS": "lite",
+        "OBJC_DISABLE_INITIALIZE_FORK_SAFETY": "YES",
+        "LITE_DB_PATH": "${workspaceFolder}/apps/backend/web/data/lite_runtime/snowball_lite_dev.db",
+        "LITE_XALPHA_CACHE_BACKEND": "sql",
+        "LITE_ENABLE_XALPHA_SQL_CACHE": "true",
+        "LITE_XALPHA_CACHE_SQLITE_PATH": "${workspaceFolder}/apps/backend/web/data/lite_runtime/lite_xalpha_cache/lite_xalpha_cache_dev.db",
+        "LITE_FLASK_PORT": "5003"
+      }
+    },
+    {
+      "name": "Snowball Frontend (Prod DB Proxy)",
+      "type": "pwa-node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "cwd": "${workspaceFolder}/apps/frontend",
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "env": {
+        "VITE_PROXY_TARGET": "http://127.0.0.1:5002"
+      },
+      "presentation": {
+        "hidden": true
+      }
+    },
+    {
+      "name": "Snowball Frontend (Dev DB Proxy)",
+      "type": "pwa-node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "cwd": "${workspaceFolder}/apps/frontend",
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "env": {
+        "VITE_PROXY_TARGET": "http://127.0.0.1:5003"
+      },
+      "presentation": {
+        "hidden": true
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Snowball Lite (Prod DB, Gunicorn + Frontend)",
+      "configurations": [
+        "Snowball Lite (Prod DB, Gunicorn)",
+        "Snowball Frontend (Prod DB Proxy)"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Snowball Lite (Dev DB, Gunicorn + Frontend)",
+      "configurations": [
+        "Snowball Lite (Dev DB, Gunicorn)",
+        "Snowball Frontend (Dev DB Proxy)"
+      ],
+      "stopAll": true
+    }
+  ]
+}

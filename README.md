@@ -133,7 +133,7 @@ gunicorn -c web/gunicorn.config.py web.application:app
 
 ```bash
 export LITE_DB_PATH=/absolute/path/to/snowball_lite.db
-export LITE_XALPHA_CACHE_SQLITE_PATH=/absolute/path/to/lite_xalpha_cache.db
+export LITE_XALPHA_CACHE_SQLITE_PATH=/absolute/path/to/lite_xalpha_cache/lite_xalpha_cache.db
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES  # macOS 本地 Gunicorn 建议加上
 cd apps/backend
 gunicorn -c web/gunicorn_lite.config.py web.lite_application:app
@@ -151,7 +151,7 @@ gunicorn -c web/gunicorn_lite.config.py web.lite_application:app
 
 ```bash
 export LITE_DB_PATH=/absolute/path/to/snowball_lite.db
-export LITE_XALPHA_CACHE_SQLITE_PATH=/absolute/path/to/lite_xalpha_cache.db
+export LITE_XALPHA_CACHE_SQLITE_PATH=/absolute/path/to/lite_xalpha_cache/lite_xalpha_cache.db
 cd apps/backend
 uv run --no-dev python -m web.lite_application
 ```
@@ -175,6 +175,14 @@ uv run --no-dev python -m web.lite_application
 ```bash
 docker compose up -d --build
 ```
+
+如果你是在服务器上直接拉仓库代码再部署，而后端仍然沿用命名卷，可以用交互脚本：
+
+```bash
+scripts/deploy-lite-docker.sh
+```
+
+这个脚本会明确提示一件事：当前 compose 用的是命名卷，`apps/backend/web/data/lite_runtime/` 下的数据库文件不会自动映射进容器；如果你希望容器直接用项目目录里的那套 lite 数据，脚本会先把它同步到命名卷，再启动服务。启动完成后，脚本还会检查后端 docs、前端首页和前端到后端的代理链路是否可用。
 
 启动后默认端口：
 
@@ -212,9 +220,9 @@ uv run --no-dev python -m web.lite_application
 - `stg` 不建议长期常驻；只在发版前演练或数据检查时，从 stable 复制快照，例如 `apps/backend/web/data/lite_runtime/snowball_lite_stg_YYYYMMDD.db`
 - `LITE_XALPHA_CACHE_BACKEND` 默认是 `sql`
 - `LITE_ENABLE_XALPHA_SQL_CACHE` 默认是 `true`
-- `LITE_XALPHA_CACHE_SQLITE_PATH` 不传时，默认写到 `apps/backend/web/data/lite_runtime/lite_xalpha_cache.db`
+- `LITE_XALPHA_CACHE_SQLITE_PATH` 不传时，默认写到 `apps/backend/web/data/lite_runtime/lite_xalpha_cache/lite_xalpha_cache.db`
 - `LITE_XALPHA_CACHE_DIR` 只在显式切回 `csv` backend 时使用
-- 旧的 `data/lite_xalpha_cache` 不再作为默认路径，也不会为默认 SQLite 模式做迁移；它继续按可丢弃缓存处理
+- 旧的 `data/lite_xalpha_cache` 目录仍按可丢弃 CSV 缓存处理；默认 SQLite 模式不会再直接写到这个目录外面
 - Lite 模式只保证最小启动链路，不等同于完整生产能力
 - lite 下 `/system/token`、`databox` 启动期 token 注入都走 SQLite `system_settings`
 - lite 下通知发送和资产初始化默认不要求 Redis / Dramatiq；需要延迟能力时优先走 scheduler

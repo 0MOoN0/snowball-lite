@@ -13,7 +13,7 @@ services:
       LITE_SCHEDULER_DB_PATH: /app/apps/backend/web/data/lite_runtime/scheduler/snowball_lite_scheduler.db
       LITE_XALPHA_CACHE_BACKEND: sql
       LITE_ENABLE_XALPHA_SQL_CACHE: "true"
-      LITE_XALPHA_CACHE_SQLITE_PATH: /app/apps/backend/web/data/lite_runtime/lite_xalpha_cache.db
+      LITE_XALPHA_CACHE_SQLITE_PATH: /app/apps/backend/web/data/lite_runtime/lite_xalpha_cache/lite_xalpha_cache.db
       pushplus: ${pushplus:-}
       telegram_bot: ${telegram_bot:-}
       chat_id: ${chat_id:-}

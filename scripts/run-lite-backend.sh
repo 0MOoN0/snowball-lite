@@ -15,7 +15,7 @@ Defaults:
 - runner: gunicorn
 - SNOW_APP_STATUS=lite
 - LITE_DB_PATH=apps/backend/web/data/lite_runtime/snowball_lite.db
-- LITE_XALPHA_CACHE_SQLITE_PATH=apps/backend/web/data/lite_runtime/lite_xalpha_cache.db
+- LITE_XALPHA_CACHE_SQLITE_PATH=apps/backend/web/data/lite_runtime/lite_xalpha_cache/lite_xalpha_cache.db
 EOF
 }
 
@@ -82,7 +82,7 @@ export SNOW_APP_STATUS="${SNOW_APP_STATUS:-lite}"
 export LITE_DB_PATH="${LITE_DB_PATH:-$lite_runtime_dir/snowball_lite.db}"
 export LITE_XALPHA_CACHE_BACKEND="${LITE_XALPHA_CACHE_BACKEND:-sql}"
 export LITE_ENABLE_XALPHA_SQL_CACHE="${LITE_ENABLE_XALPHA_SQL_CACHE:-true}"
-export LITE_XALPHA_CACHE_SQLITE_PATH="${LITE_XALPHA_CACHE_SQLITE_PATH:-$lite_runtime_dir/lite_xalpha_cache.db}"
+export LITE_XALPHA_CACHE_SQLITE_PATH="${LITE_XALPHA_CACHE_SQLITE_PATH:-$lite_runtime_dir/lite_xalpha_cache/lite_xalpha_cache.db}"
 
 platform="$(uname -s)"
 platform_note="Linux/mainline mode: Gunicorn request worker uses gevent."
