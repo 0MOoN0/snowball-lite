@@ -1,38 +1,45 @@
-# docker-compose.yml
-version: '3'
 services:
-  web:
-    build: .
-    container_name: snow
-    working_dir: /app/apps/backend
-    restart: no
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    container_name: snowball-lite-backend
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      SNOW_APP_STATUS: lite
+      LITE_FLASK_PORT: "5001"
+      LITE_DB_PATH: /app/apps/backend/web/data/lite_runtime/snowball_lite.db
+      LITE_SCHEDULER_DB_PATH: /app/apps/backend/web/data/lite_runtime/scheduler/snowball_lite_scheduler.db
+      LITE_XALPHA_CACHE_BACKEND: sql
+      LITE_ENABLE_XALPHA_SQL_CACHE: "true"
+      LITE_XALPHA_CACHE_SQLITE_PATH: /app/apps/backend/web/data/lite_runtime/lite_xalpha_cache.db
+      pushplus: ${pushplus:-}
+      telegram_bot: ${telegram_bot:-}
+      chat_id: ${chat_id:-}
     ports:
       - "5001:5001"
-    environment:
-      - FLASK_APP=web.application:app
-      - SNOW_APP_STATUS=dev
-      - FLASK_DEBUG=False
-      - pushplus=${pushplus}
-      - telegram_bot=${telegram_bot}
-      - chat_id=${chat_id}
-      - STG_DB_PASSWORD=${STG_DB_PASSWORD}
-      - STG_DB_HOST=${STG_DB_HOST}
-      - STG_DB_PORT=${STG_DB_PORT}
-      - STG_REDIS_HOST=${STG_REDIS_HOST}
-      - STG_REDIS_PORT=${STG_REDIS_PORT}
-      - STG_REDIS_PASSWORD=${STG_REDIS_PASSWORD}
-      - DEV_DB_PASSWORD=${STG_DB_PASSWORD}
-      - DEV_DB_HOST=${STG_DB_HOST}
-      - DEV_DB_PORT=${STG_DB_PORT}
-      - DEV_REDIS_HOST=${STG_REDIS_HOST}
-      - DEV_REDIS_PORT=${STG_REDIS_PORT}
-      - DEV_REDIS_PASSWORD=${STG_REDIS_PASSWORD}
     volumes:
-      - /mnt/d/DevFiles/docker_data/snowball/logs:/app/apps/backend/weblogs
-    networks:
-      - snowball
-    command: gunicorn web.application:app -c ./web/gunicorn.config.py
-networks:
-  snowball:
-    name: snowball
-    driver: bridge
+      - backend_runtime:/app/apps/backend/web/data/lite_runtime
+      - backend_logs:/app/apps/backend/weblogs
+    command: ["gunicorn", "-c", "web/gunicorn_lite.config.py", "web.lite_application:app"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        PNPM_VERSION: 10.28.2
+        VITE_BUILD_MODE: lite
+        VITE_SOURCEMAP: "false"
+        NODE_OPTIONS: --max-old-space-size=1536
+    container_name: snowball-lite-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  backend_runtime:
+  backend_logs:

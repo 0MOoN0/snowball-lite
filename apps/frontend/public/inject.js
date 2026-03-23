@@ -1,0 +1,1 @@
+window.__SNOWBALL_RUNTIME_CONFIG__ = window.__SNOWBALL_RUNTIME_CONFIG__ || {};

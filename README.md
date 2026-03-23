@@ -165,13 +165,23 @@ uv run --no-dev python -m web.lite_application
 
 ### Docker 启动
 
-`docker-compose.yml` 已配置 `gunicorn` 与端口映射：
+根目录的 `docker-compose.yml` 现在按 lite 主线拆成了前后端两个服务：
+
+- `frontend`：单独构建 Vite 静态产物，并由 Nginx 提供页面服务
+- `backend`：单独运行 lite Gunicorn，默认使用 SQLite 持久化运行数据
+
+直接执行：
 
 ```bash
-docker-compose up -d
+docker compose up -d --build
 ```
 
-注意将 `pushplus/telegram/chat_id` 与数据库、Redis 等环境变量在 shell 或 `.env` 中正确传递。
+启动后默认端口：
+
+- 前端页面：`http://127.0.0.1:8080`
+- 后端接口与文档：`http://127.0.0.1:5001`
+
+前端容器内构建默认关闭 `VITE_SOURCEMAP`，并限制 Node 堆大小，主要是为了降低 Docker 场景下的前端构建内存压力。通知相关变量如 `pushplus`、`telegram_bot`、`chat_id` 仍然可以通过 shell 或 `.env` 传入。
 
 ## 配置与环境变量
 

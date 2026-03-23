@@ -134,7 +134,22 @@ server: {
 
 ### 部署说明
 
-这份工作区只保留源码和构建配置，独立的 Nginx / Docker 部署文件已经清理。后续如果需要统一部署口径，会在 monorepo 根目录再补。
+当前 monorepo 根目录已经补了统一的 Docker 部署口径：
+
+- 根目录 `docker-compose.yml`：启动前端静态站点和 lite 后端
+- `docker/frontend/Dockerfile`：前端构建和 Nginx 运行镜像
+- `docker/backend/Dockerfile`：lite 后端运行镜像
+
+如果直接走容器部署，建议从仓库根目录执行：
+
+```bash
+docker compose up -d --build
+```
+
+默认对外端口：
+
+- 前端：`8080`
+- 后端：`5001`
 
 ## 目录结构
 
