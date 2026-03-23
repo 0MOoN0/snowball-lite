@@ -2,17 +2,16 @@
   <Dialog v-model="dialogShow" :title="dialogTitle" @close="closeDialog" center>
     <Form ref="formRef" :is-col="false" :schema="jobForm" />
     <template #footer>
-      <ElButton type="primary" @click="confirmDialog">提交</ElButton>
       <ElButton @click="closeDialog">关闭</ElButton>
     </template>
   </Dialog>
 </template>
 <script lang="ts" setup>
 import Dialog from '@/components/Dialog/src/Dialog.vue'
+import type { JobInfo } from '@/api/snow/Scheduler/job/types'
 import { FormExpose } from '@/components/Form'
 import Form from '@/components/Form/src/Form.vue'
-import { useValidator } from '@/hooks/web/useValidator'
-import { computed, nextTick, reactive, ref, unref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, unref, watch, type PropType } from 'vue'
 
 const emit = defineEmits(['closeDialog', 'update:dialogVisible'])
 
@@ -26,7 +25,7 @@ const props = defineProps({
     default: ''
   },
   jobInfo: {
-    type: Object,
+    type: Object as PropType<JobInfo | null>,
     default: null
   }
 })
@@ -41,28 +40,31 @@ const closeDialog = () => {
 }
 
 const formRef = ref<FormExpose>()
-const { required } = useValidator()
 
 const jobForm = reactive<FormSchema[]>([
   {
-    field: 'id',
+    field: 'jobId',
     label: 'ID',
     component: 'Input',
-    formItemProps: {
-      rules: [required()]
+    componentProps: {
+      readonly: true
     }
   },
   {
     field: 'name',
     label: '任务名称',
-    component: 'Input'
+    component: 'Input',
+    componentProps: {
+      readonly: true
+    }
   },
   {
     field: 'func',
     label: '调用方法',
     component: 'Input',
     componentProps: {
-      type: 'textarea'
+      type: 'textarea',
+      readonly: true
     }
   },
   {
@@ -70,7 +72,7 @@ const jobForm = reactive<FormSchema[]>([
     label: '参数列表',
     component: 'Input',
     componentProps: {
-      placeholder: '请输入参数列表，如果有多个，请使用,隔开'
+      readonly: true
     }
   },
   {
@@ -78,7 +80,8 @@ const jobForm = reactive<FormSchema[]>([
     label: '关键字参数字典',
     component: 'Input',
     componentProps: {
-      type: 'textarea'
+      type: 'textarea',
+      readonly: true
     }
   },
   {
@@ -103,13 +106,7 @@ const jobForm = reactive<FormSchema[]>([
           value: 'cron'
         }
       ],
-      onChange: (val) => {
-        // 根据资产类型构建表单
-        console.log('change select: ', val)
-      }
-    },
-    formItemProps: {
-      rules: [required()]
+      disabled: true
     }
   }
 ])
@@ -118,31 +115,11 @@ watch(
   () => props.jobInfo,
   (jobInfo) => {
     nextTick(() => {
-      unref(formRef)?.setValues(jobInfo)
+      if (jobInfo) {
+        unref(formRef)?.setValues(jobInfo)
+      }
     })
   }
 )
-
-// 关闭弹窗
-const confirmDialog = () => {
-  // unref(formRef)
-  //   ?.getElFormRef()
-  //   ?.validate((valid) => {
-  //     if (valid) {
-  //       const model = unref(formRef)?.formModel
-  //       console.log('model : ', model)
-  //       assetApi.saveOrUpdateAsset(model).then((res) => {
-  //         if (res.success) {
-  //           ElMessage({
-  //             message: '操作成功',
-  //             type: 'error'
-  //           })
-  //         }
-  //       })
-  //     }
-  //   })
-  const model = unref(formRef)?.formModel
-  console.log('model ===> ', model)
-}
 </script>
 <style></style>

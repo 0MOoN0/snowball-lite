@@ -1,9 +1,9 @@
 # scheduler_execution_persistence requirement status
 
 - source doc: `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/task/scheduler_execution_persistence/requirement.md`
-- current status: in_progress
+- current status: completed
 - current round: 5
-- current task: `05_frontend_settings`
+- current task: `completed`
 - report root: `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence`
 
 ## task status
@@ -14,7 +14,7 @@
 | 02_task_classification | completed | 01_runtime_core | lite 主线任务策略归类与扩面 |
 | 03_state_storage_optimization | completed | 01_runtime_core | 状态表与事件日志分层，round-03 复审无 findings |
 | 04_persistence_api | completed | 02_task_classification | 策略覆盖持久化与后端接口，round-01 复审无 findings |
-| 05_frontend_settings | pending | 04_persistence_api | 前端单任务策略设置 |
+| 05_frontend_settings | completed | 04_persistence_api | 前端策略设置完成，round-02 复审无 findings |
 
 ## files touched
 
@@ -29,6 +29,9 @@
 - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/03_state_storage_optimization/round-03-review.md`
 - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/04_persistence_api/task-status.md`
 - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/04_persistence_api/round-01-review.md`
+- `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/05_frontend_settings/task-status.md`
+- `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/05_frontend_settings/round-01-review.md`
+- `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/05_frontend_settings/round-02-review.md`
 - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/requirement-status.md`
 - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/scheduler/__init__.py`
 - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/services/scheduler/scheduler_service.py`
@@ -64,6 +67,11 @@
 - `python3 /Users/leon/.codex/skills/staged-code-review-tdd/scripts/validate_review_report.py --report apps/backend/web/docs/review/scheduler_execution_persistence/03_state_storage_optimization/round-02-review.md`
 - `python3 /Users/leon/.codex/skills/staged-code-review-tdd/scripts/validate_review_report.py --report apps/backend/web/docs/review/scheduler_execution_persistence/03_state_storage_optimization/round-03-review.md`
 - `python3 /Users/leon/.codex/skills/staged-code-review-tdd/scripts/validate_review_report.py --report apps/backend/web/docs/review/scheduler_execution_persistence/04_persistence_api/round-01-review.md`
+- `pnpm install`
+- `pnpm --dir apps/frontend ts:check`
+- `pnpm --dir apps/frontend exec vue-tsc --noEmit --pretty false 2>&1 | rg 'src/views/Snow/Setting/Scheduler/' || echo NO_SCHEDULER_PATH_MATCHES`
+- `python3 /Users/leon/.codex/skills/staged-code-review-tdd/scripts/validate_review_report.py --report apps/backend/web/docs/review/scheduler_execution_persistence/05_frontend_settings/round-01-review.md`
+- `python3 /Users/leon/.codex/skills/staged-code-review-tdd/scripts/validate_review_report.py --report apps/backend/web/docs/review/scheduler_execution_persistence/05_frontend_settings/round-02-review.md`
 
 ## latest blockers
 
@@ -71,5 +79,4 @@
 
 ## next action
 
-- 提交 `04_persistence_api` checkpoint。
-- 进入 `05_frontend_settings`，按现有 scheduler 页面结构补策略展示和设置弹窗。
+- 写入 `requirement-summary.md` 并提交本次 requirement 收尾改动。
