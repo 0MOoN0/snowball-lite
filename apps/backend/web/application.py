@@ -3,6 +3,14 @@ from web import create_app
 from web.common.utils.timezone_util import set_timezone
 from web.weblogger import info
 
+
+def _safe_print(message: str) -> None:
+    try:
+        print(message)
+    except OSError:
+        # Gunicorn worker under detached/devtools launch may not have a writable stdout.
+        pass
+
 # 设置时区为东八区
 set_timezone("Asia/Shanghai")
 
@@ -11,7 +19,7 @@ env = environ.get("SNOW_APP_STATUS", "dev")
 
 # 打印当前使用的配置
 config_name = env
-print(f"应用启动环境: {config_name}")
+_safe_print(f"应用启动环境: {config_name}")
 info(f"应用启动环境: {config_name}")
 info(f"日志时区: Asia/Shanghai")
 info(f"应用日志保留天数: 30")
@@ -22,7 +30,7 @@ app = create_app(env)
 
 # 打印配置类型
 config_class = app.config.get("ENV", "未知")
-print(f"配置类型: {config_class}")
+_safe_print(f"配置类型: {config_class}")
 info(f"配置类型: {config_class}")
 
 if __name__ == "__main__":
@@ -35,6 +43,6 @@ if __name__ == "__main__":
     if current_config and hasattr(current_config, 'FLASK_PORT'):
         port = current_config.FLASK_PORT
     
-    print(f"Flask应用端口: {port}")
+    _safe_print(f"Flask应用端口: {port}")
     info(f"Flask应用端口: {port}")
     app.run(host='0.0.0.0', port=port, debug=False)

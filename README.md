@@ -36,6 +36,14 @@
 - `flask --app web.application:app run --host 0.0.0.0 --port 5001`
 - `gunicorn -c web/gunicorn.config.py web.application:app`
 - `gunicorn -c web/gunicorn_lite.config.py web.lite_application:app`
+- `../../scripts/run-lite-backend.sh`
+
+## 运行环境口径
+
+- `Linux` 是主运行环境，lite 的 Gunicorn 路径默认按 `gevent` 理解
+- `Darwin` 按本地开发兼容环境处理，不承诺和 Linux 完全同构
+- Darwin 本地如果走 Gunicorn，请求层会按兼容模式降到 `sync`；APScheduler 仍保持仓库现有 gevent 实现
+- 跨平台启动优先走 `scripts/run-lite-backend.sh`
 
 ## 文档入口
 
@@ -101,6 +109,12 @@ cd apps/backend
 python -m web.lite_application
 ```
 
+如果你想直接按仓库当前平台口径启动：
+
+```bash
+scripts/run-lite-backend.sh
+```
+
 或使用 Flask CLI：
 
 ```bash
@@ -120,6 +134,7 @@ gunicorn -c web/gunicorn.config.py web.application:app
 ```bash
 export LITE_DB_PATH=/absolute/path/to/snowball_lite.db
 export LITE_XALPHA_CACHE_SQLITE_PATH=/absolute/path/to/lite_xalpha_cache.db
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES  # macOS 本地 Gunicorn 建议加上
 cd apps/backend
 gunicorn -c web/gunicorn_lite.config.py web.lite_application:app
 ```
@@ -127,6 +142,8 @@ gunicorn -c web/gunicorn_lite.config.py web.lite_application:app
 - 这份配置固定 `SNOW_APP_STATUS=lite`
 - 单 worker
 - 默认监听 `5002`，可用 `LITE_FLASK_PORT` 覆盖
+- `Linux` 主环境默认按 `gevent` worker 理解
+- `Darwin` 本地兼容模式会在请求层降到 `sync`
 
 ### 使用 uv 启动 lite
 
@@ -143,7 +160,8 @@ uv run --no-dev python -m web.lite_application
 - 启动前会自动执行 `bootstrap_lite_database(...)`
 - `--no-dev` 只安装运行应用所需依赖，不把 pytest 这类开发依赖一并拉进来
 - 当前仓库的 `.python-version` 还是旧的 pyenv 虚拟环境名，`uv` 可能会提示一个 warning，但不影响 lite 启动
-- 如果你要走 Gunicorn，改用 `cd apps/backend && gunicorn -c web/gunicorn_lite.config.py web.lite_application:app`
+- 如果你要走 Gunicorn，macOS 本地建议先 `export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`，再执行 `cd apps/backend && gunicorn -c web/gunicorn_lite.config.py web.lite_application:app`
+- 如果你不想自己记平台差异，直接跑 `scripts/run-lite-backend.sh --runner uv`
 
 ### Docker 启动
 
@@ -204,7 +222,7 @@ uv run --no-dev python -m web.lite_application
 - 也可以直接用两个联动启动项，一次同时拉起 Gunicorn 后端和前端 Vite：
   - `Snowball Lite (Prod DB, Gunicorn + Frontend)`
   - `Snowball Lite (Dev DB, Gunicorn + Frontend)`
-- Gunicorn 调试启动项会直接跑 `.venv/bin/gunicorn`，并打开 `gevent` / `subProcess` 支持，避免 VSCode 调试层和 gunicorn worker 分叉冲突
+- Gunicorn 调试启动项会直接跑 `.venv/bin/gunicorn`；Darwin 本地兼容环境会额外补 fork safety 环境变量
 
 更多配置说明见 `docs/backend/runtime-config.md` 与 `apps/backend/web/settings.py` 注释。
 

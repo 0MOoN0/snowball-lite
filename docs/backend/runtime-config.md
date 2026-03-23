@@ -9,6 +9,13 @@
 - 默认目标：本地单机、弱依赖、最小可运行链路
 - 默认不依赖 Redis、Dramatiq、`flask-profiler`
 
+## 平台口径
+
+- `Linux` 是 lite 的主运行环境，Gunicorn 默认按 `gevent` 路径理解
+- `Darwin` 只按本地开发兼容环境处理，不承诺和 Linux 完全同构
+- Darwin 本地如果走 Gunicorn，请求层默认按兼容模式降到 `sync`，APScheduler 仍保持仓库现有 gevent 实现
+- 跨平台启动优先走统一脚本：`scripts/run-lite-backend.sh`
+
 ## lite 快速启动
 
 推荐命令：
@@ -28,6 +35,20 @@ export LITE_XALPHA_CACHE_SQLITE_PATH=/absolute/path/to/lite_xalpha_cache.db
 cd apps/backend
 uv run --no-dev python -m web.lite_application
 ```
+
+如果你要统一按当前平台口径启动：
+
+```bash
+scripts/run-lite-backend.sh
+```
+
+补充说明：
+
+- 默认 `--runner gunicorn`
+- `Linux` 下会继续走 `gunicorn + gevent`
+- `Darwin` 下会在启动前补 `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`，并让 Gunicorn 请求层走兼容模式
+- 如果只想跑 Python 入口，可用 `scripts/run-lite-backend.sh --runner python`
+- 如果本地使用 `uv`，可用 `scripts/run-lite-backend.sh --runner uv`
 
 ## lite 关键变量
 
@@ -55,6 +76,7 @@ uv run --no-dev python -m web.lite_application
 - lite 默认会把 scheduler jobstore 落到独立 SQLite 文件；业务库和 `LITE_SCHEDULER_DB_PATH` 必须各自独立
 - `stable/prod` 和 `dev` 的默认 scheduler 文件会按业务库文件名自动派生，例如 `snowball_lite_scheduler.db`、`snowball_lite_dev_scheduler.db`
 - test 口径默认也会跟着 pytest 临时业务库派生独立 scheduler SQLite 文件，避免写到长期 lite 目录
+- Darwin 本地兼容模式只解决本地开发启动和请求链稳定性，不应该反向定义 Linux 主环境语义
 
 ## 历史多环境变量
 
