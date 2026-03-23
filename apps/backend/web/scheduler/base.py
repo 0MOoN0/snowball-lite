@@ -1,7 +1,8 @@
 from flask_apscheduler import APScheduler
-# from apscheduler.schedulers.background import BackgroundScheduler # 不再使用 BackgroundScheduler
-from apscheduler.schedulers.gevent import GeventScheduler # 引入 GeventScheduler
-from apscheduler.executors.gevent import GeventExecutor # 引入 GeventExecutor
+from apscheduler.executors.gevent import GeventExecutor
+from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.gevent import GeventScheduler
 import platform
 import pytz
 
@@ -15,39 +16,56 @@ def resolve_jobstore_config(jobstore_config):
 
     return SQLAlchemyJobStore(url=jobstore_config.get("url"))
 
-# Windows与其他系统通用的初始化方法
+def _use_thread_scheduler_runtime():
+    return platform.system() == "Darwin"
+
+
+def get_scheduler_runtime_backend() -> str:
+    return "background_threadpool" if _use_thread_scheduler_runtime() else "gevent"
+
+
+def _build_scheduler_executors():
+    if _use_thread_scheduler_runtime():
+        return {
+            "default": ThreadPoolExecutor(max_workers=4),
+        }
+    return {
+        "default": GeventExecutor(),
+    }
+
+
+def _build_internal_scheduler(scheduler_config):
+    if _use_thread_scheduler_runtime():
+        return BackgroundScheduler(**scheduler_config)
+    return GeventScheduler(**scheduler_config)
+
+
 def create_apscheduler():
     """创建一个预配置的APScheduler实例，确保在所有环境中一致工作"""
-    
-    # 配置执行器
-    executors = {
-        'default': GeventExecutor()
-    }
-    
+
+    executors = _build_scheduler_executors()
+
     # 基本配置
     scheduler_config = {
-        'timezone': pytz.timezone("Asia/Shanghai"),
-        'executors': executors, # 设置执行器
-        'job_defaults': {
-            'coalesce': True,           # 合并延迟的任务
-            'max_instances': 1,         # 同一个任务最大实例数
-            'misfire_grace_time': 60    # 错过执行时间的宽限期（秒）
-        }
+        "timezone": pytz.timezone("Asia/Shanghai"),
+        "executors": executors,
+        "job_defaults": {
+            "coalesce": True,
+            "max_instances": 1,
+            "misfire_grace_time": 60,
+        },
     }
-    
-    # 创建内部调度器实例为 GeventScheduler
-    internal_scheduler = GeventScheduler(**scheduler_config)
-    
-    # 创建Flask-APScheduler实例，并传入我们自定义的 internal_scheduler
+
+    internal_scheduler = _build_internal_scheduler(scheduler_config)
     scheduler_instance = APScheduler(scheduler=internal_scheduler)
-    
-    # 返回配置好的scheduler实例
+    scheduler_instance.runtime_backend = get_scheduler_runtime_backend()
+
     return scheduler_instance
 
-# 创建调度器实例
+
 scheduler = create_apscheduler()
 
-# 后续初始化将在init_app中完成
+
 def init_jobstores(app):
     """
     为scheduler手动设置jobstores
@@ -68,33 +86,28 @@ def init_jobstores(app):
         return False # 明确返回False
     default_jobstore_config = resolve_jobstore_config(default_jobstore_config)
 
-    # 设置jobstores
-    # scheduler._scheduler 引用的是我们传入的 GeventScheduler 实例
-    if hasattr(scheduler, '_scheduler') and scheduler._scheduler:
+    if hasattr(scheduler, "_scheduler") and scheduler._scheduler:
         try:
-            # Windows系统上的特殊处理逻辑保持不变
-            if platform.system() == 'Windows':
+            if platform.system() == "Windows":
                 try:
-                    scheduler._scheduler.configure(jobstores={'default': default_jobstore_config})
+                    scheduler._scheduler.configure(jobstores={"default": default_jobstore_config})
                     app.logger.debug("Windows系统成功配置SQLAlchemy jobstores")
                     return True
                 except Exception as e:
-                    # 增加了对 gevent 可能抛出的 "Selected backend doesn't support timezone-aware datetimes" 的检查
-                    if ("Timezone offset does not match system offset" in str(e) or 
+                    if ("Timezone offset does not match system offset" in str(e) or
                         "Selected backend doesn't support timezone-aware datetimes" in str(e)):
                         app.logger.warning(f"Windows时区相关问题导致SQLAlchemyJobStore配置失败: {e}")
                         app.logger.info("APScheduler在Windows上将回退到默认的MemoryJobStore。")
-                        return False 
+                        return False
                     else:
                         app.logger.error(f"Windows系统配置jobstores时发生非预期错误: {e}", exc_info=True)
-                        raise 
+                        raise
             else:
-                # 非Windows系统，正常设置
-                scheduler._scheduler.configure(jobstores={'default': default_jobstore_config})
+                scheduler._scheduler.configure(jobstores={"default": default_jobstore_config})
                 app.logger.debug("成功配置SQLAlchemy jobstores")
                 return True
         except Exception as e:
             app.logger.error(f"设置jobstores时出错: {e}", exc_info=True)
-            print(f"设置jobstores时出错: {e}") # 保持原有打印
-            
+            print(f"设置jobstores时出错: {e}")
+
     return False

@@ -13,6 +13,7 @@ from apscheduler.events import (
     JobExecutionEvent,
     JobSubmissionEvent,
 )
+import pytz
 import pytest
 import sqlalchemy
 
@@ -25,6 +26,7 @@ from web.models.scheduler.scheduler_log import SchedulerLog
 from web.models.scheduler.scheduler_job_state import SchedulerJobState
 from web.models.setting.system_settings import Setting
 from web.scheduler import scheduler_listener
+from web.scheduler import base as scheduler_base
 from web.services.scheduler.scheduler_service import scheduler_service
 
 
@@ -165,6 +167,22 @@ def test_lite_scheduler_persistent_mode_rejects_same_sqlite_file(
         create_app("lite")
 
 
+def test_create_apscheduler_uses_background_threadpool_on_darwin():
+    with patch.object(scheduler_base.platform, "system", return_value="Darwin"):
+        scheduler_instance = scheduler_base.create_apscheduler()
+
+    assert scheduler_instance.runtime_backend == "background_threadpool"
+    assert type(scheduler_instance._scheduler).__name__ == "BackgroundScheduler"
+
+
+def test_create_apscheduler_keeps_gevent_backend_on_linux():
+    with patch.object(scheduler_base.platform, "system", return_value="Linux"):
+        scheduler_instance = scheduler_base.create_apscheduler()
+
+    assert scheduler_instance.runtime_backend == "gevent"
+    assert type(scheduler_instance._scheduler).__name__ == "GeventScheduler"
+
+
 def test_lite_scheduler_jobs_route_handles_empty_scheduler_log_table(
     lite_runtime_paths,
 ):
@@ -180,6 +198,45 @@ def test_lite_scheduler_jobs_route_handles_empty_scheduler_log_table(
         payload = response.get_json()
         assert payload["success"] is True
         assert isinstance(payload["data"], list)
+    finally:
+        _dispose_app(app)
+
+
+def test_lite_scheduler_status_route_marks_overdue_jobs_unhealthy(lite_runtime_paths):
+    app = create_app("lite")
+
+    try:
+        overdue_time = datetime.now(pytz.timezone("Asia/Shanghai")) - timedelta(minutes=5)
+        mock_internal_scheduler = SimpleNamespace(
+            running=True,
+            state=1,
+            _thread=SimpleNamespace(is_alive=lambda: True),
+        )
+        mock_scheduler = SimpleNamespace(
+            running=True,
+            host_name="mac.lan",
+            runtime_backend="background_threadpool",
+            _scheduler=mock_internal_scheduler,
+            get_jobs=lambda: [
+                SimpleNamespace(
+                    id="manual::fake",
+                    name="manual::fake",
+                    next_run_time=overdue_time,
+                )
+            ],
+        )
+
+        with patch("web.routers.scheduler.scheduler_routers.scheduler", mock_scheduler):
+            response = app.test_client().get("/scheduler")
+
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert payload["success"] is True
+        assert payload["data"]["running"] is True
+        assert payload["data"]["healthy"] is False
+        assert "已过期未推进" in payload["data"]["health_message"]
+        assert payload["data"]["runtime_backend"] == "background_threadpool"
+        assert payload["data"]["diagnostic_info"]["overdue_jobs_count"] == 1
     finally:
         _dispose_app(app)
 

@@ -42,7 +42,7 @@
 
 - `Linux` 是主运行环境，lite 的 Gunicorn 路径默认按 `gevent` 理解
 - `Darwin` 按本地开发兼容环境处理，不承诺和 Linux 完全同构
-- Darwin 本地如果走 Gunicorn，请求层会按兼容模式降到 `sync`；APScheduler 仍保持仓库现有 gevent 实现
+- Darwin 本地如果走 Gunicorn，请求层会按兼容模式降到 `sync`；scheduler 侧改用线程版 APScheduler，避免 `sync worker + gevent scheduler` 假活
 - 跨平台启动优先走 `scripts/run-lite-backend.sh`
 
 ## 文档入口

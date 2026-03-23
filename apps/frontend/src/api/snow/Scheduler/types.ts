@@ -1,6 +1,9 @@
 export interface SchedulerInfo {
   current_host: string
   running: boolean
+  healthy?: boolean
+  health_message?: string
+  runtime_backend?: string
 }
 
 export type SchedulerPolicySource = 'default' | 'override'

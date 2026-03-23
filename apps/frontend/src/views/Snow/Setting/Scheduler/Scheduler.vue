@@ -1,11 +1,6 @@
 <template>
   <ContentWrap v-if="runtimeCapabilityFlags.scheduler" title="任务列表" class="mt-5">
-    <Descriptions
-      title="定时任务概览"
-      :data="displaySchedulerInfo"
-      :schema="schedulerInfoSchema"
-      class="mb-5"
-    />
+    <Descriptions title="定时任务概览" :data="displaySchedulerInfo" :schema="schedulerInfoSchema" class="mb-5" />
     <el-alert
       title="策略说明：full 会保留完整执行记录；signal_only 只在成功执行真正处理到业务信号时保留成功记录；error_only 只保留错误和错过执行。点击“设置策略/查看策略”可查看当前任务为什么能改或为什么只读。"
       type="info"
@@ -22,12 +17,7 @@
       <el-table-column prop="name" label="任务名称" />
       <el-table-column prop="func" label="调用方法" />
       <el-table-column prop="args" label="参数列表" show-overflow-tooltip width="100px" />
-      <el-table-column
-        prop="kwargs"
-        label="关键字参数字典"
-        :formatter="kwargsFormatter"
-        show-overflow-tooltip
-      />
+      <el-table-column prop="kwargs" label="关键字参数字典" :formatter="kwargsFormatter" show-overflow-tooltip />
       <el-table-column prop="trigger" label="触发器" show-overflow-tooltip width="70px">
         <template #default="scope">
           <el-tag>{{ scope.row.trigger }}</el-tag>
@@ -51,12 +41,7 @@
         </template>
       </el-table-column>
       <el-table-column prop="nextRunTime" label="下一次运行时间" :formatter="dataFormat" sortable />
-      <el-table-column
-        prop="schedulerRunTime"
-        label="最近一次执行时间"
-        :formatter="dataFormat"
-        sortable
-      />
+      <el-table-column prop="schedulerRunTime" label="最近一次执行时间" :formatter="dataFormat" sortable />
       <el-table-column prop="exectionSate" label="最近一次执行结果">
         <template #default="scope">
           <el-tag :type="getExectionTagStyle(scope.row.executionState)">{{
@@ -101,30 +86,16 @@
               <el-button size="small" type="primary" text icon="View" @click="viewJobDetail(scope.row)"
                 >查看任务</el-button
               >
-              <el-button
-                size="small"
-                type="primary"
-                text
-                icon="Setting"
-                @click="openPolicyDialog(scope.row)"
-              >
+              <el-button size="small" type="primary" text icon="Setting" @click="openPolicyDialog(scope.row)">
                 {{ jobPolicyReadonly(scope.row) ? '查看策略' : '设置策略' }}
               </el-button>
-              <el-button
-                v-if="jobPolicyReadonly(scope.row)"
-                size="small"
-                type="info"
-                text
-                disabled
-              >
+              <el-button v-if="jobPolicyReadonly(scope.row)" size="small" type="info" text disabled>
                 策略只读
               </el-button>
               <el-button size="small" type="primary" text icon="Document" @click="viewLogs(scope.row)"
                 >查看日志</el-button
               >
-              <el-button size="small" type="danger" text icon="Delete" :disabled="true"
-                >删除任务</el-button
-              >
+              <el-button size="small" type="danger" text icon="Delete" :disabled="true">删除任务</el-button>
             </el-space>
           </el-space>
         </template>
@@ -132,12 +103,7 @@
     </el-table>
   </ContentWrap>
   <ContentWrap v-else title="任务列表" class="mt-5">
-    <el-alert
-      title="当前运行配置未开启 scheduler"
-      type="warning"
-      :closable="false"
-      show-icon
-    />
+    <el-alert title="当前运行配置未开启 scheduler" type="warning" :closable="false" show-icon />
   </ContentWrap>
   <template v-if="runtimeCapabilityFlags.scheduler">
     <JobDetailDialog
@@ -186,17 +152,31 @@ import { JobInfo } from '@/api/snow/Scheduler/job/types'
 import type { SchedulerInfo } from '@/api/snow/Scheduler/types'
 
 // === 属性
-const schedulerInfo = reactive<SchedulerInfo>({ current_host: '', running: false })
+const schedulerInfo = reactive<SchedulerInfo>({
+  current_host: '',
+  running: false,
+  healthy: false,
+  health_message: '',
+  runtime_backend: '',
+})
 
 const schedulerInfoSchema = reactive<DescriptionsSchema[]>([
   {
     field: 'current_host',
-    label: '主机地址'
+    label: '主机地址',
   },
   {
     field: 'running',
-    label: '运行状态'
-  }
+    label: '运行状态',
+  },
+  {
+    field: 'healthy',
+    label: '健康状态',
+  },
+  {
+    field: 'runtime_backend',
+    label: '调度后端',
+  },
 ])
 
 const jobList = ref<JobInfo[]>([])
@@ -204,13 +184,13 @@ const jobList = ref<JobInfo[]>([])
 const jobDetailDialog = reactive({
   dialogVisible: false,
   dialogTtile: '',
-  jobInfo: null as JobInfo | null
+  jobInfo: null as JobInfo | null,
 })
 
 const jobPolicyDialog = reactive({
   dialogVisible: false,
   dialogTitle: '',
-  jobInfo: null as JobInfo | null
+  jobInfo: null as JobInfo | null,
 })
 
 const exectionStateMap = reactive({ 0: '已提交', 1: '已执行', 2: '执行错误', 3: '错过执行' })
@@ -221,22 +201,20 @@ const operationMap = reactive({ run: 'run', pause: 'pause', resume: 'resume' })
 const jobLogDialog = reactive({
   dialogVisible: false,
   dialogTitle: '',
-  jobInfo: null as JobInfo | null
+  jobInfo: null as JobInfo | null,
 })
 
 // 任务提交对话框属性
 const jobRunnerDialog = reactive({
   dialogVisible: false,
   dialogTitle: '',
-  jobInfo: null as JobInfo | null
+  jobInfo: null as JobInfo | null,
 })
 // 定时器
 const intervalId = ref<NodeJS.Timeout | null>(null)
 
 // 定时器容器，key为jobId，值为定时器
-const jobRunnerTimerMap = reactive<Map<string, { timestamp: Date; interval: NodeJS.Timeout }>>(
-  new Map()
-)
+const jobRunnerTimerMap = reactive<Map<string, { timestamp: Date; interval: NodeJS.Timeout }>>(new Map())
 
 // 是否可运行列表
 const disRunableList = ref<Record<string, boolean>>({})
@@ -286,8 +264,6 @@ initJobList()
 watch(schedulerInfo, () => {
   console.log(`schedulerInfo : `, schedulerInfo)
 })
-
-
 
 // == hook end
 
@@ -355,10 +331,7 @@ const runJob = async (jobId: string) => {
             return
           }
           // 判断时间状态是否超过15分钟，如果超过了15分钟，清除这个定时器
-          if (
-            jobLogRes.data.executionState !== 0 ||
-            dayjs().diff(dayjs(jobRunnerInfo.timestamp), 'minute') > 15
-          ) {
+          if (jobLogRes.data.executionState !== 0 || dayjs().diff(dayjs(jobRunnerInfo.timestamp), 'minute') > 15) {
             // 清除定时器
             clearInterval(jobRunnerInfo.interval)
             jobRunnerTimerMap.delete(jobId)
@@ -370,7 +343,7 @@ const runJob = async (jobId: string) => {
         } catch (error) {
           console.error(`Error fetching job log for jobId ${jobId}:`, error)
         }
-      }, 5000)
+      }, 5000),
     })
   } catch (error) {
     console.error(`Error starting job with jobId ${jobId}:`, error)
@@ -547,7 +520,13 @@ const operateJob = async (jobInfo: JobInfo, operation: string) => {
 const displaySchedulerInfo = computed(() => {
   return {
     current_host: schedulerInfo.current_host,
-    running: schedulerInfo.running ? '正在运行' : '停止运行'
+    running: schedulerInfo.running ? '已启动' : '未启动',
+    healthy: schedulerInfo.running
+      ? schedulerInfo.healthy
+        ? '运行正常'
+        : schedulerInfo.health_message || '假活/卡住'
+      : '-',
+    runtime_backend: schedulerInfo.runtime_backend || '-',
   }
 })
 </script>
