@@ -14,6 +14,7 @@ from web.common.cons import webcons
 from web.common.utils import R
 from web.databox import databox
 from web.services.system.system_token_service import system_token_service
+from web.services.system.xueqiu_token_service import xueqiu_token_service
 
 from web.weblogger import debug
 
@@ -131,4 +132,48 @@ class SystemDataRouter(Resource):
         return R.ok(data=setting)
 
 
+class SystemTokenRefreshRouter(Resource):
+    def post(self):
+        """
+        @@@
+        ```
+        处理POST请求，自动获取并保存雪球 token
+
+        Returns:
+            R.ok(): 返回最新 token 数据
+        ```
+        @@@
+        """
+        debug("自动获取雪球 token，开始")
+        try:
+            xq_token = xueqiu_token_service.fetch_xq_token()
+
+            if _is_lite_runtime():
+                payload = system_token_service.save_xq_token(xq_token)
+                databox.set_token(key=webcons.DataBoxTokenKey.XQ_TOKEN, token=xq_token)
+                debug("lite 模式自动获取雪球 token，结束 %s" % _mask_payload(payload))
+                return R.ok(data=payload, msg="自动获取雪球 token 成功")
+
+            if not current_app.config.get("CACHE_AVAILABLE", False) or not cache.is_initialized():
+                return R.fail(msg=_redis_boundary_message("系统 token 读写"))
+
+            databox.set_token(key=webcons.DataBoxTokenKey.XQ_TOKEN, token=xq_token)
+            cache.get_redis_client().set(
+                webcons.RedisKey.XQ_TOKEN,
+                json.dumps(xq_token, ensure_ascii=False),
+            )
+            payload = {
+                **xq_token,
+                "serverchen_sendkey": cache.get_redis_client().get(
+                    webcons.RedisKey.SERVERCHAN_SENDKEY
+                ),
+            }
+            debug("自动获取雪球 token，结束 %s" % _mask_payload(payload))
+            return R.ok(data=payload, msg="自动获取雪球 token 成功")
+        except Exception as exc:
+            debug(f"自动获取雪球 token 失败: {exc}")
+            return R.fail(msg=f"自动获取雪球 token 失败: {exc}")
+
+
 system_api.add_resource(SystemDataRouter, "/token")
+system_api.add_resource(SystemTokenRefreshRouter, "/token/refresh")

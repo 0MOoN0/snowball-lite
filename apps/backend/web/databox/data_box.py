@@ -183,6 +183,7 @@ class DataBox:
         """
         if key == webcons.DataBoxTokenKey.XQ_TOKEN:
             self.xa_adapter.get_core().universal.set_token(token)
+            self.xa_service.xa.universal.set_token(token)
 
     def get_token(self, key: str) -> Dict:
         """

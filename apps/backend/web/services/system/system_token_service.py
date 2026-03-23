@@ -83,6 +83,20 @@ class SystemTokenService:
         )
         return payload
 
+    def save_xq_token(self, xq_token: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            self._upsert_setting(
+                webcons.DataBoxTokenKey.XQ_TOKEN,
+                json.dumps(xq_token, ensure_ascii=False),
+                "json",
+            )
+            db.session.commit()
+            return self.get_token_payload()
+        except Exception as exc:
+            db.session.rollback()
+            error(f"保存雪球 token 失败: {exc}", exc_info=True)
+            raise
+
     def save_token_payload(self, xq_token: Dict[str, Any], serverchen_sendkey: str) -> Dict[str, Any]:
         try:
             self._upsert_setting(

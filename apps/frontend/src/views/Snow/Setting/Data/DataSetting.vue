@@ -16,6 +16,7 @@
         <template #xq_a_token="data">
           <el-space>
             <el-input v-model="data.xq_a_token" required />
+            <el-button @click="refreshXueqiuToken">自动获取</el-button>
             <el-button @click="testCode">测试token</el-button>
             <span :style="{ color: tokenTestRes ? 'green' : 'red' }">{{
               tokenTestResC + (testTimestamp ? ' : ' + testTimestamp : '')
@@ -115,6 +116,26 @@ const getToken = async () => {
   const res = await SettingDataApi.getToken()
   if (res && res.data) {
     unref(formRef)?.setValues(res.data)
+  }
+}
+
+const refreshXueqiuToken = async () => {
+  if (!runtimeCapabilityFlags.systemToken) {
+    ElMessage.warning('当前运行口径已关闭系统 token 配置')
+    return
+  }
+
+  try {
+    const res = await SettingDataApi.refreshXueqiuToken()
+    if (res && res.success) {
+      unref(formRef)?.setValues(res.data)
+      ElMessage.success('已自动获取并保存雪球 token')
+      return
+    }
+    ElMessage.error(res?.message || '自动获取雪球 token 失败')
+  } catch (error) {
+    console.error('自动获取雪球 token 失败:', error)
+    ElMessage.error('自动获取雪球 token 失败，请稍后重试。')
   }
 }
 
