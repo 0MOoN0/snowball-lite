@@ -97,7 +97,30 @@
 - 建议工作分支：`feature/*`、`fix/*`、`codex/*`。
 - 当前仓库启用了 release-please，发布基于 `main` 自动推进。
 
-## 8. MCP 与浏览器联调
+## 8. Worktree 与依赖初始化
+
+- 这个仓库允许用 `git worktree` 做隔离开发，但默认只共享 Git 对象库和包管理缓存，不共享 worktree 级安装结果。
+- 默认 bootstrap 入口是仓库内的 `scripts/bootstrap-worktree.sh`；它只初始化“当前 worktree”，不会替别的 worktree 安装依赖。
+- 后端默认使用 `uv` 管理当前 worktree 的 `.venv`，不要再按 `pyenv` 虚拟环境名来维护项目运行环境。
+- `scripts/bootstrap-worktree.sh` 默认会执行：
+  - `uv sync --python 3.11 --frozen --group dev`
+  - `pnpm install --frozen-lockfile --prefer-offline`
+- 仓库根目录的 `.python-version` 固定为 `3.11`，目的是让 `uv` 和本地解释器选择更稳定，不代表要使用 `pyenv virtualenv`。
+- 允许共享的层级：
+  - `pnpm` store
+  - `uv` / `pip` 下载缓存
+  - 其它只读或可重建缓存
+- 默认不要手工共享这些 worktree 级状态：
+  - `.venv`
+  - `node_modules`
+  - SQLite 运行库文件
+  - 本地日志、测试缓存、临时输出
+- 如果只需要一侧依赖，可用：
+  - `scripts/bootstrap-worktree.sh --skip-frontend`
+  - `scripts/bootstrap-worktree.sh --skip-backend`
+- 本地个性化自动激活配置放本机，不进仓库主线；仓库只提供 `.envrc.example` 作为参考，真实 `.envrc` 保持未跟踪。
+
+## 9. MCP 与浏览器联调
 
 - 需要连接、检查或操作浏览器时，优先使用 `chrome devtools mcp`。
 - 只有 `chrome devtools mcp` 明确不可用，或者当前目标必须依赖它不支持的能力时，才改用其他浏览器相关 MCP 或工具，并在过程说明里写清原因。

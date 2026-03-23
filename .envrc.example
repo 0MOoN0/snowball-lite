@@ -1,0 +1,8 @@
+export SNOW_APP_STATUS=lite
+
+if [ -f .venv/bin/activate ]; then
+  source .venv/bin/activate
+fi
+
+# Optional local overrides:
+# export LITE_DB_PATH="$PWD/apps/backend/web/data/lite_runtime/snowball_lite_dev.db"

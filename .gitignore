@@ -26,6 +26,7 @@ dist/
 xalpha.egg-info/
 .coverage
 .vscode/
+.envrc
 .cursor/
 mytest/
 weblogs/
