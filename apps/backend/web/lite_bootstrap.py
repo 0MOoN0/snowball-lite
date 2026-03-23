@@ -28,6 +28,7 @@ LITE_BASELINE_REVISION = "lite_stage3_baseline"
 LITE_STAGE5_REQUIRED_TABLES = {
     "tb_asset",
     "tb_apscheduler_log",
+    "tb_apscheduler_job_state",
     "tb_asset_code",
     "tb_asset_fund_daily_data",
     "tb_asset_fund_fee_rule",

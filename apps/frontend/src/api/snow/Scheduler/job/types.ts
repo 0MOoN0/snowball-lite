@@ -1,18 +1,23 @@
-
 export interface JobInfo {
-    args: Array<any>
-    func: string
-    jobId: any
-    kwargs: JSON
-    maxInstances: number
-    minutes: number
-    misfireGraceTime: number
-    name: string
-    nextRunTime: string
-    startDate: string
-    trigger: string
-    exception: string
-    traceback: string
-    executionState: number
-    schedulerRunTime: string
+  args: unknown[]
+  defaultPolicy: string
+  effectivePolicy: string
+  exception: string
+  executionState: number
+  func: string
+  jobId: string
+  kwargs: Record<string, unknown>
+  maxInstances: number
+  minutes: number
+  misfireGraceTime: number
+  name: string
+  nextRunTime: string | null
+  policyReason: string
+  policySource: string
+  policySwitchable: boolean
+  schedulerRunTime: string | null
+  startDate: string
+  supportedPolicies: string[]
+  traceback: string
+  trigger: string
 }

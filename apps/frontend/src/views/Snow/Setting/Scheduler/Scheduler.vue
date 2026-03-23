@@ -6,6 +6,13 @@
       :schema="schedulerInfoSchema"
       class="mb-5"
     />
+    <el-alert
+      title="策略说明：full 会保留完整执行记录；signal_only 只在成功执行真正处理到业务信号时保留成功记录；error_only 只保留错误和错过执行。点击“设置策略/查看策略”可查看当前任务为什么能改或为什么只读。"
+      type="info"
+      :closable="false"
+      show-icon
+      class="mb-4"
+    />
     <el-table
       :data="jobList"
       stripe
@@ -26,6 +33,23 @@
           <el-tag>{{ scope.row.trigger }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="defaultPolicy" label="默认策略" width="120">
+        <template #default="scope">
+          <el-tag>{{ scope.row.defaultPolicy || '-' }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="effectivePolicy" label="当前生效策略" width="140">
+        <template #default="scope">
+          <el-tag type="success">{{ scope.row.effectivePolicy || '-' }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="policySource" label="策略来源" width="110">
+        <template #default="scope">
+          <el-tag :type="getPolicySourceTagType(scope.row.policySource)">
+            {{ getPolicySourceText(scope.row.policySource) }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="nextRunTime" label="下一次运行时间" :formatter="dataFormat" sortable />
       <el-table-column
         prop="schedulerRunTime"
@@ -41,7 +65,7 @@
         </template>
       </el-table-column>
       <el-table-column prop="successRate" label="执行成功率" sortable />
-      <el-table-column prop="actions" label="操作" fixed="right" width="200px">
+      <el-table-column prop="actions" label="操作" fixed="right" width="240px">
         <template #default="scope">
           <el-space direction="horizontal">
             <el-space direction="vertical">
@@ -74,10 +98,28 @@
               >
             </el-space>
             <el-space direction="vertical">
-              <el-button size="small" type="primary" text icon="Edit" @click="editJob(scope.row)"
-                >编辑任务</el-button
+              <el-button size="small" type="primary" text icon="View" @click="viewJobDetail(scope.row)"
+                >查看任务</el-button
               >
-              <el-button size="small" type="primary" text icon="View" @click="viewLogs(scope.row)"
+              <el-button
+                size="small"
+                type="primary"
+                text
+                icon="Setting"
+                @click="openPolicyDialog(scope.row)"
+              >
+                {{ jobPolicyReadonly(scope.row) ? '查看策略' : '设置策略' }}
+              </el-button>
+              <el-button
+                v-if="jobPolicyReadonly(scope.row)"
+                size="small"
+                type="info"
+                text
+                disabled
+              >
+                策略只读
+              </el-button>
+              <el-button size="small" type="primary" text icon="Document" @click="viewLogs(scope.row)"
                 >查看日志</el-button
               >
               <el-button size="small" type="danger" text icon="Delete" :disabled="true"
@@ -104,17 +146,24 @@
       @close-dialog="closeEditDailog"
       :job-info="jobDetailDialog.jobInfo"
     />
+    <JobPolicyDialog
+      :dialog-visible="jobPolicyDialog.dialogVisible"
+      :dialog-title="jobPolicyDialog.dialogTitle"
+      :job-info="jobPolicyDialog.jobInfo"
+      @close-dialog="closePolicyDialog"
+      @saved="handlePolicySaved"
+    />
     <JobLogDialog
       :dialog-visible="jobLogDialog.dialogVisible"
       :dialog-title="jobLogDialog.dialogTitle"
       @close-dialog="closeLogDailog"
-      :job-info="jobLogDialog.jobInfo"
+      :job-info="jobLogDialog.jobInfo ?? undefined"
     />
     <JobRunnerDialog
       :dialog-visible="jobRunnerDialog.dialogVisible"
       :dialog-title="jobRunnerDialog.dialogTitle"
       @close-dialog="closeJobRunnerDialog"
-      :job-info="jobRunnerDialog.jobInfo"
+      :job-info="jobRunnerDialog.jobInfo ?? undefined"
       @run-job="runJob"
     />
   </template>
@@ -126,6 +175,7 @@ import { runtimeCapabilityFlags } from '@/config/runtimeProfile'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Descriptions } from '@/components/Descriptions'
 import JobDetailDialog from './JobDetailDialog.vue'
+import JobPolicyDialog from './JobPolicyDialog.vue'
 import JobLogDialog from './JobLogDialog.vue'
 import JobRunnerDialog from './JobRunnerDialog.vue'
 import dayjs from 'dayjs'
@@ -133,9 +183,10 @@ import { ElMessage } from 'element-plus'
 import { cloneDeep, set, has, join } from 'lodash-es'
 import { reactive, ref, watch, onUnmounted, computed } from 'vue'
 import { JobInfo } from '@/api/snow/Scheduler/job/types'
+import type { SchedulerInfo } from '@/api/snow/Scheduler/types'
 
 // === 属性
-const schedulerInfo = reactive({ current_host: '', running: false })
+const schedulerInfo = reactive<SchedulerInfo>({ current_host: '', running: false })
 
 const schedulerInfoSchema = reactive<DescriptionsSchema[]>([
   {
@@ -153,7 +204,13 @@ const jobList = ref<JobInfo[]>([])
 const jobDetailDialog = reactive({
   dialogVisible: false,
   dialogTtile: '',
-  jobInfo: {}
+  jobInfo: null as JobInfo | null
+})
+
+const jobPolicyDialog = reactive({
+  dialogVisible: false,
+  dialogTitle: '',
+  jobInfo: null as JobInfo | null
 })
 
 const exectionStateMap = reactive({ 0: '已提交', 1: '已执行', 2: '执行错误', 3: '错过执行' })
@@ -164,14 +221,14 @@ const operationMap = reactive({ run: 'run', pause: 'pause', resume: 'resume' })
 const jobLogDialog = reactive({
   dialogVisible: false,
   dialogTitle: '',
-  jobInfo: {}
+  jobInfo: null as JobInfo | null
 })
 
 // 任务提交对话框属性
 const jobRunnerDialog = reactive({
   dialogVisible: false,
   dialogTitle: '',
-  jobInfo: { jobId: '' }
+  jobInfo: null as JobInfo | null
 })
 // 定时器
 const intervalId = ref<NodeJS.Timeout | null>(null)
@@ -358,21 +415,39 @@ const kwargsFormatter = (_, __, kwargs) => {
   return JSON.stringify(kwargs)
 }
 
-const editJob = (jobInfo: JobInfo) => {
+const viewJobDetail = (jobInfo: JobInfo) => {
   jobDetailDialog.dialogVisible = true
   // 处理参数列表和关键字参数字典
   jobDetailDialog.jobInfo = cloneDeep(jobInfo)
   // 将关键字字典转为JSON字符串
-  set(jobDetailDialog.jobInfo, 'kwargs', JSON.stringify(jobInfo.kwargs))
+  set(jobDetailDialog.jobInfo, 'kwargs', JSON.stringify(jobInfo.kwargs || {}))
   // 将args数组转为以,分割的字符串
   if (has(jobInfo, 'args')) {
     set(jobDetailDialog.jobInfo, 'args', join(jobInfo.args, ','))
   }
-  jobDetailDialog.dialogTtile = '编辑 ' + jobInfo.name + ' 任务作业'
+  jobDetailDialog.dialogTtile = '查看 ' + jobInfo.name + ' 任务详情'
 }
 
 const closeEditDailog = () => {
   jobDetailDialog.dialogVisible = false
+}
+
+const jobPolicyReadonly = (jobInfo: JobInfo) => {
+  return (jobInfo.supportedPolicies || []).length <= 1
+}
+
+const openPolicyDialog = (jobInfo: JobInfo) => {
+  jobPolicyDialog.dialogVisible = true
+  jobPolicyDialog.dialogTitle = `${jobPolicyReadonly(jobInfo) ? '查看' : '设置'} ${jobInfo.name} 策略`
+  jobPolicyDialog.jobInfo = cloneDeep(jobInfo)
+}
+
+const closePolicyDialog = () => {
+  jobPolicyDialog.dialogVisible = false
+}
+
+const handlePolicySaved = async (jobId: string) => {
+  await refreshJobData(jobId)
 }
 
 const getExectionStateText = (state: number) => {
@@ -393,6 +468,20 @@ const getExectionTagStyle = (state: number) => {
     } else if (state == 3) {
       return 'warning'
     }
+  }
+  return 'info'
+}
+
+const getPolicySourceText = (source: string) => {
+  if (source === 'override') {
+    return '覆盖值'
+  }
+  return '默认值'
+}
+
+const getPolicySourceTagType = (source: string) => {
+  if (source === 'override') {
+    return 'warning'
   }
   return 'info'
 }

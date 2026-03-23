@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import traceback
 import logging
+from dataclasses import dataclass
+from datetime import datetime
 
 import sqlalchemy
 from apscheduler.events import *
@@ -15,6 +17,7 @@ except ImportError:  # lite 默认不需要 pymysql，MySQL 相关异常只在�
 from web.common.cache import cache
 from web.common.cons import webcons
 from web.models import db
+from web.models.scheduler.scheduler_job_state import SchedulerJobState
 from web.models.scheduler.scheduler_log import SchedulerLog
 from web.scheduler.base import init_jobstores, resolve_jobstore_config, scheduler
 from web.scheduler.manual_job_id import decode_manual_job_id
@@ -29,6 +32,134 @@ from web.scheduler import notice_scheduler
 
 # 全局变量，跟踪调度器是否已经初始化
 _scheduler_initialized = False
+
+_EXECUTION_PERSISTENCE_FULL_STRATEGY = "full"
+_EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY = "signal_only"
+_EXECUTION_PERSISTENCE_ERROR_ONLY_STRATEGY = "error_only"
+_EXECUTION_PERSISTENCE_AVAILABLE_STRATEGIES = (
+    _EXECUTION_PERSISTENCE_FULL_STRATEGY,
+    _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY,
+    _EXECUTION_PERSISTENCE_ERROR_ONLY_STRATEGY,
+)
+
+
+@dataclass(frozen=True)
+class ExecutionPersistenceProfile:
+    default_policy: str
+    supported_policies: tuple[str, ...]
+    switchable: bool
+    reason: str
+
+
+def _build_execution_persistence_profile(
+    default_policy: str,
+    supported_policies: tuple[str, ...],
+    switchable: bool,
+    reason: str,
+) -> ExecutionPersistenceProfile:
+    return ExecutionPersistenceProfile(
+        default_policy=default_policy,
+        supported_policies=supported_policies,
+        switchable=switchable,
+        reason=reason,
+    )
+
+
+_EXECUTION_PERSISTENCE_DEFAULT_PROFILE = _build_execution_persistence_profile(
+    default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+    supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+    switchable=False,
+    reason="未命中注册任务时继续沿用 full，避免误伤现有 scheduler 行为",
+)
+_EXECUTION_PERSISTENCE_PROFILE_REGISTRY: dict[str, ExecutionPersistenceProfile] = {
+    "AsyncTaskScheduler.consume_notification_outbox": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY,
+        supported_policies=(
+            _EXECUTION_PERSISTENCE_FULL_STRATEGY,
+            _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY,
+        ),
+        switchable=True,
+        reason="返回 stats.claimed，能稳定判断是否真的处理了业务信号；空轮询不应写成功日志",
+    ),
+    "notice_scheduler.cb_subscribe_today": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="成功与否取决于发行列表和通知发送链路，当前没有结构化业务信号可供安全收口",
+    ),
+    "notice_scheduler.cb_subscribe_tomorrow": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="成功与否取决于发行列表和通知发送链路，当前没有结构化业务信号可供安全收口",
+    ),
+    "notice_scheduler.daily_report": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="日报任务是聚合型输出，当前只具备日志语义，不具备可稳定判定的业务信号",
+    ),
+    "DataboxTestScheduler.test_databox_get_rt": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="成功只记日志、失败才发通知，但当前还没有足够证据把它安全收口为 error_only",
+    ),
+    "analysis_scheduler.to_analysis_all_transaction": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="分析任务只写入过程日志，当前没有返回可测试的成功信号",
+    ),
+    "analysis_scheduler.analysis_all_the_time": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="一次性全量分析更适合保留完整执行轨迹，当前没有收口依据",
+    ),
+    "AssetScheduler.update_asset_holding": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="任务内部有处理数量，但没有稳定返回值供 listener 判断业务信号",
+    ),
+    "AssetScheduler.update_fund_daily_data": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="任务内部有新增记录数日志，但没有稳定返回值供 listener 判断业务信号",
+    ),
+    "AssetScheduler.update_stock_asset": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="任务内部有新增股票代码数日志，但没有稳定返回值供 listener 判断业务信号",
+    ),
+    "AssetScheduler.monitor_grid_type_detail": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="监控任务会产生命中/未命中变化，但当前不返回可测试的结构化业务结果",
+    ),
+    "GridTypeScheduler.grid_type_trade_analysis": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="分析任务只写日志，没有结构化成功信号",
+    ),
+    "GridStrategyScheduler.grid_strategy_trade_analysis": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="分析任务只写日志，没有结构化成功信号",
+    ),
+    "AssetScheduler.complement_asset_data": _build_execution_persistence_profile(
+        default_policy=_EXECUTION_PERSISTENCE_FULL_STRATEGY,
+        supported_policies=(_EXECUTION_PERSISTENCE_FULL_STRATEGY,),
+        switchable=False,
+        reason="补全任务只写日志，没有结构化成功信号",
+    ),
+}
 
 
 def _mysql_operational_errors():
@@ -150,6 +281,174 @@ def _get_cache_client_or_none():
         return cache.get_redis_client()
     except RuntimeError:
         return None
+
+
+def _get_execution_persistence_profile(job_id: str | None) -> ExecutionPersistenceProfile:
+    if not job_id:
+        return _EXECUTION_PERSISTENCE_DEFAULT_PROFILE
+    return _EXECUTION_PERSISTENCE_PROFILE_REGISTRY.get(
+        job_id,
+        _EXECUTION_PERSISTENCE_DEFAULT_PROFILE,
+    )
+
+
+def _get_registered_execution_persistence_profiles() -> dict[str, ExecutionPersistenceProfile]:
+    return dict(_EXECUTION_PERSISTENCE_PROFILE_REGISTRY)
+
+
+def _get_effective_execution_persistence_profile(
+    job_id: str | None,
+) -> ExecutionPersistenceProfile:
+    profile = _get_execution_persistence_profile(job_id)
+
+    try:
+        from web.services.scheduler.scheduler_persistence_service import (
+            scheduler_persistence_service,
+        )
+
+        effective_policy = scheduler_persistence_service.get_effective_policy(job_id)
+    except Exception:
+        return profile
+
+    if effective_policy == profile.default_policy:
+        return profile
+
+    return _build_execution_persistence_profile(
+        default_policy=effective_policy,
+        supported_policies=profile.supported_policies,
+        switchable=profile.switchable,
+        reason=profile.reason,
+    )
+
+
+def _get_execution_persistence_strategy(job_id: str | None) -> str:
+    return _get_effective_execution_persistence_profile(job_id).default_policy
+
+
+def _is_manual_job_id(raw_job_id: str | None) -> bool:
+    return decode_manual_job_id(raw_job_id or "") is not None
+
+
+def _has_business_signal(execution_event: JobExecutionEvent) -> bool:
+    retval = getattr(execution_event, "retval", None)
+    if retval is None:
+        return False
+
+    claimed = None
+    if isinstance(retval, dict):
+        claimed = retval.get("claimed")
+    else:
+        claimed = getattr(retval, "claimed", None)
+
+    try:
+        return int(claimed) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _should_persist_execution_event(
+    profile: ExecutionPersistenceProfile,
+    execution_event: JobExecutionEvent,
+) -> bool:
+    if profile.default_policy == _EXECUTION_PERSISTENCE_FULL_STRATEGY:
+        return True
+    if profile.default_policy == _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY:
+        return _has_business_signal(execution_event)
+    return False
+
+
+def _should_persist_submission_event(
+    profile: ExecutionPersistenceProfile,
+    is_manual_job: bool,
+) -> bool:
+    if is_manual_job:
+        return True
+    return profile.default_policy == _EXECUTION_PERSISTENCE_FULL_STRATEGY
+
+
+def _get_error_msg(event):
+    if isinstance(event, JobExecutionEvent) and event.code == EVENT_JOB_ERROR:
+        exception_msg = event.exception
+        return (
+            str(exception_msg) if exception_msg is not None else None,
+            event.traceback,
+        )
+    return None, None
+
+
+def _get_scheduler_run_time(event):
+    if isinstance(event, JobSubmissionEvent):
+        if event.scheduled_run_times and event.scheduled_run_times[0] is not None:
+            return event.scheduled_run_times[0].replace(tzinfo=None, microsecond=0)
+    elif isinstance(event, JobExecutionEvent):
+        return event.scheduled_run_time.replace(tzinfo=None, microsecond=0)
+    return None
+
+
+def _get_event_type(event):
+    if hasattr(event, "code"):
+        if event.code == EVENT_JOB_SUBMITTED:
+            return SchedulerLog.get_scheduler_state_enum().SUBMITTED.value
+        elif event.code == EVENT_JOB_ERROR:
+            return SchedulerLog.get_scheduler_state_enum().ERROR.value
+        elif event.code == EVENT_JOB_MISSED:
+            return SchedulerLog.get_scheduler_state_enum().MISSED.value
+        elif event.code == EVENT_JOB_EXECUTED:
+            return SchedulerLog.get_scheduler_state_enum().EXECUTED.value
+    raise Exception(f"Unexpected event code: {getattr(event, 'code', None)}")
+
+
+def _should_mark_signal_run(
+    profile: ExecutionPersistenceProfile,
+    execution_event: JobSubmissionEvent | JobExecutionEvent,
+) -> bool:
+    if getattr(execution_event, "code", None) != EVENT_JOB_EXECUTED:
+        return False
+    if profile.default_policy == _EXECUTION_PERSISTENCE_SIGNAL_ONLY_STRATEGY:
+        return _has_business_signal(execution_event)
+    return profile.default_policy == _EXECUTION_PERSISTENCE_FULL_STRATEGY
+
+
+def _sync_job_state(
+    *,
+    job_id: str,
+    execution_event: JobSubmissionEvent | JobExecutionEvent,
+    profile: ExecutionPersistenceProfile,
+) -> None:
+    event_type = _get_event_type(execution_event)
+    scheduler_run_time = _get_scheduler_run_time(execution_event)
+    exception_msg, _ = _get_error_msg(execution_event)
+    event_time = datetime.now()
+
+    job_state = (
+        db.session.query(SchedulerJobState)
+        .filter(SchedulerJobState.job_id == job_id)
+        .first()
+    )
+    if job_state is None:
+        job_state = SchedulerJobState(
+            job_id=job_id,
+            last_execution_state=event_type,
+        )
+
+    job_state.last_execution_state = event_type
+    if scheduler_run_time is not None:
+        job_state.last_scheduler_run_time = scheduler_run_time
+
+    if event_type == SchedulerLog.get_scheduler_state_enum().SUBMITTED.value:
+        job_state.last_submitted_time = event_time
+    elif event_type == SchedulerLog.get_scheduler_state_enum().EXECUTED.value:
+        job_state.last_finished_time = event_time
+        if _should_mark_signal_run(profile, execution_event):
+            job_state.last_signal_run_time = event_time
+        job_state.last_error = None
+        job_state.last_error_time = None
+    elif event_type == SchedulerLog.get_scheduler_state_enum().ERROR.value:
+        job_state.last_finished_time = event_time
+        job_state.last_error_time = event_time
+        job_state.last_error = exception_msg
+
+    db.session.add(job_state)
 
 
 def _attach_run_log_buffer(job_id: str, scheduled_run_time) -> None:
@@ -537,6 +836,9 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
     logs_to_persist: str | None = None
     job_id_for_persist: str | None = None
     run_time_for_persist = None
+    job_id_resolved = _resolve_job_id(callback_event)
+    execution_profile = _get_effective_execution_persistence_profile(job_id_resolved)
+    is_manual_job = _is_manual_job_id(job_id_str)
 
     if callback_event.code == EVENT_JOB_SUBMITTED:
         event_type_str = "任务已提交 (SUBMITTED)"
@@ -547,7 +849,6 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
         )
         # 运行日志开始：挂载缓冲处理器（零线程）
         try:
-            job_id_resolved = _resolve_job_id(callback_event)
             scheduled_rt = getattr(callback_event, "scheduled_run_time", None) or getattr(callback_event, "scheduled_run_times", [None])[0]
             _attach_run_log_buffer(job_id_resolved, scheduled_rt)
         except Exception as e:
@@ -561,7 +862,6 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
         )
         # 运行日志结束：卸载缓冲并入库
         try:
-            job_id_resolved = _resolve_job_id(callback_event)
             scheduled_rt = getattr(callback_event, "scheduled_run_time", None) or getattr(callback_event, "scheduled_run_times", [None])[0]
             logs_to_persist = _detach_run_log_buffer(job_id_resolved, scheduled_rt)
             job_id_for_persist = job_id_resolved
@@ -581,7 +881,6 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
         )  # 对于生产环境，可能需要更精简的错误日志或发送到专门的错误跟踪系统
         # 运行日志结束：卸载缓冲并入库（包含错误信息）
         try:
-            job_id_resolved = _resolve_job_id(callback_event)
             scheduled_rt = getattr(callback_event, "scheduled_run_time", None) or getattr(callback_event, "scheduled_run_times", [None])[0]
             logs_to_persist = _detach_run_log_buffer(job_id_resolved, scheduled_rt)
             job_id_for_persist = job_id_resolved
@@ -595,7 +894,6 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
         )
         # 运行日志结束：卸载缓冲并入库（错过执行也记录时间窗内日志）
         try:
-            job_id_resolved = _resolve_job_id(callback_event)
             scheduled_rt = getattr(callback_event, "scheduled_run_time", None) or getattr(callback_event, "scheduled_run_times", [None])[0]
             logs_to_persist = _detach_run_log_buffer(job_id_resolved, scheduled_rt)
             job_id_for_persist = job_id_resolved
@@ -607,102 +905,46 @@ def scheduler_listener(callback_event: JobSubmissionEvent | JobExecutionEvent):
             f"APScheduler接收到未知事件代码: {callback_event.code} - 作业ID: {job_id_str}"
         )
 
-    # 原有的 save_logs 逻辑保持不变，它负责将事件信息持久化到数据库
-    # 但要注意，这里的日志是实时输出到控制台/文件的，而save_logs是写入数据库的，两者目的不同
     def save_logs(execution_event: JobSubmissionEvent | JobExecutionEvent):
-        """
-        保存作业提交或作业执行事件的日志信息。
+        job_id = job_id_resolved
+        should_persist_event = True
+        if (
+            execution_event.code == EVENT_JOB_SUBMITTED
+            and not _should_persist_submission_event(execution_profile, is_manual_job)
+        ):
+            debug(
+                "APScheduler事件: SUBMITTED 命中非 full 策略且不是手动触发，跳过落库"
+            )
+            should_persist_event = False
+        if (
+            execution_event.code == EVENT_JOB_EXECUTED
+            and not _should_persist_execution_event(execution_profile, execution_event)
+        ):
+            debug(
+                "APScheduler事件: EXECUTED 命中 signal_only 策略且未发现业务信号，跳过落库"
+            )
+            should_persist_event = False
 
-        Args:
-            execution_event (JobSubmissionEvent | JobExecutionEvent): 事件对象，可以是作业提交事件（JobSubmissionEvent）或作业执行事件（JobExecutionEvent）。
-
-        Returns:
-            无返回值。
-
-        """
-        job_id = _resolve_job_id(execution_event)
-        # 记录日志
-        scheduler_log: SchedulerLog = SchedulerLog()
-        scheduler_log.job_id = job_id
-        # get event type from event object code
-        scheduler_log.execution_state = _get_event_type(execution_event)
-        scheduler_log.scheduler_run_time = _get_scheduler_run_time(execution_event)
-        scheduler_log.exception, scheduler_log.traceback = _get_error_msg(
-            execution_event
-        )
         try:
-            db.session.add(scheduler_log)
+            if should_persist_event:
+                scheduler_log: SchedulerLog = SchedulerLog()
+                scheduler_log.job_id = job_id
+                scheduler_log.execution_state = _get_event_type(execution_event)
+                scheduler_log.scheduler_run_time = _get_scheduler_run_time(execution_event)
+                scheduler_log.exception, scheduler_log.traceback = _get_error_msg(
+                    execution_event
+                )
+                db.session.add(scheduler_log)
+
+            _sync_job_state(
+                job_id=job_id,
+                execution_event=execution_event,
+                profile=execution_profile,
+            )
             db.session.commit()
         except Exception as e:
             error(f"scheduler_log save error: {e}", exc_info=True)
             db.session.rollback()
-
-    def _get_error_msg(event):
-        """
-        从事件对象中获取错误信息和跟踪信息。
-
-        Args:
-            event (Event): 事件对象，必须是JobExecutionEvent类型，并且事件代码为EVENT_JOB_ERROR。
-
-        Returns:
-            tuple: 包含两个元素的元组，第一个元素为异常信息，第二个元素为跟踪信息。
-                如果事件不是JobExecutionEvent类型或事件代码不为EVENT_JOB_ERROR，则返回(None, None)。
-
-        """
-        # 判断事件类型
-        if isinstance(event, JobExecutionEvent) and event.code == EVENT_JOB_ERROR:
-            exception_msg = event.exception
-            return (
-                str(exception_msg) if exception_msg is not None else None,
-                event.traceback,
-            )
-        else:
-            return None, None
-
-    def _get_scheduler_run_time(event):
-        """
-        获取调度器的运行时间。
-
-        Args:
-            event (Event): 事件对象，可能是 JobSubmissionEvent 或 JobExecutionEvent 类型。
-
-        Returns:
-            datetime: 调度器的运行时间，去除时区信息和微秒部分。
-
-        """
-        # 判断事件类型
-        if isinstance(event, JobSubmissionEvent):
-            if event.scheduled_run_times and event.scheduled_run_times[0] is not None:
-                return event.scheduled_run_times[0].replace(tzinfo=None, microsecond=0)
-        elif isinstance(event, JobExecutionEvent):
-            return event.scheduled_run_time.replace(tzinfo=None, microsecond=0)
-
-    def _get_event_type(event):
-        """
-        根据事件类型获取事件状态枚举值。
-
-        Args:
-            无参数。
-
-        Returns:
-            str: 返回事件状态枚举值。
-
-        Raises:
-            Exception: 如果事件类型未知，则抛出异常。
-
-        """
-        if hasattr(event, "code"):
-            if event.code == EVENT_JOB_SUBMITTED:
-                return SchedulerLog.get_scheduler_state_enum().SUBMITTED.value
-            elif event.code == EVENT_JOB_ERROR:
-                return SchedulerLog.get_scheduler_state_enum().ERROR.value
-            elif event.code == EVENT_JOB_MISSED:
-                return SchedulerLog.get_scheduler_state_enum().MISSED.value
-            elif event.code == EVENT_JOB_EXECUTED:
-                return SchedulerLog.get_scheduler_state_enum().EXECUTED.value
-            else:
-                # 抛出异常：非预期事件
-                raise Exception(f"Unexpected event code: {event.code}")
 
     with scheduler.app.app_context():
         save_logs(callback_event)

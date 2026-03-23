@@ -49,6 +49,7 @@ from web.models.notice.notification_log import NotificationLog
 from web.models.record.record import Record
 from web.models.record.trade_reference import TradeReference
 from web.models.scheduler.scheduler_log import SchedulerLog
+from web.models.scheduler.scheduler_job_state import SchedulerJobState
 from web.models.stock_fund import StockFund
 
 # 导出所有模型类的列表，便于其他模块使用
@@ -99,6 +100,7 @@ __all__ = [
     "Record",
     "TradeReference",
     "SchedulerLog",
+    "SchedulerJobState",
     "StockFund",
     # 设置相关
     "Setting",

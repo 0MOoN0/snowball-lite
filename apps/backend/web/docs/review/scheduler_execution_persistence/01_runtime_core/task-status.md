@@ -1,0 +1,23 @@
+# 01_runtime_core task status
+
+- source doc: `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/task/scheduler_execution_persistence/01_runtime_core.md`
+- current status: completed
+- current round: 1
+- files touched: 
+  - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/scheduler/__init__.py`
+  - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/webtest/lite/test_lite_notification_outbox.py`
+  - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/webtest/scheduler/test_scheduler_listener.py`
+  - `/Users/leon/projects/snowball-lite-codex-scheduler-execution-persistence/apps/backend/web/docs/review/scheduler_execution_persistence/01_runtime_core/2026-03-22_runtime_core_incremental_gate.md`
+- commands run:
+  - `python - <<'PY' ... inspect.signature(JobSubmissionEvent)` 
+  - `python - <<'PY' ... print(EVENT_JOB_SUBMITTED, ...)`
+  - `pytest apps/backend/web/webtest/scheduler/test_scheduler_listener.py -q`
+  - `pytest apps/backend/web/webtest/lite/test_lite_notification_outbox.py -q`  # first pass failed on over-strict DB assertion
+  - `pytest apps/backend/web/webtest/lite/test_lite_notification_outbox.py -q`
+  - `pytest apps/backend/web/webtest/lite/test_lite_scheduler_sqlite_support.py -q`
+  - `pytest apps/backend/web/webtest/lite/test_lite_notification_outbox.py -q`  # second pass failed after SUBMITTED split
+  - `pytest apps/backend/web/webtest/lite/test_lite_notification_outbox.py -q`
+  - `pytest apps/backend/web/webtest/scheduler/test_scheduler_listener.py -q`
+  - `pytest apps/backend/web/webtest/lite/test_lite_scheduler_sqlite_support.py -q`
+- latest blockers: none
+- next action: Task 1 已通过独立 review，进入 `02_task_classification`

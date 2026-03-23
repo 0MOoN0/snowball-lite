@@ -121,6 +121,7 @@ def test_lite_bootstrap_survives_blocked_mysql_and_optional_infra_packages(tmp_p
                 assert "tb_asset" in table_names
                 assert "tb_record" in table_names
                 assert "tb_apscheduler_log" in table_names
+                assert "tb_apscheduler_job_state" in table_names
                 assert foreign_keys == 1
                 assert str(journal_mode).lower() == "wal"
                 print(
@@ -186,6 +187,7 @@ def test_lite_application_bootstraps_database_when_imported(tmp_path: pathlib.Pa
             assert "tb_asset" in table_names
             assert "tb_record" in table_names
             assert "tb_apscheduler_log" in table_names
+            assert "tb_apscheduler_job_state" in table_names
             print(json.dumps({{"version": version, "table_count": len(table_names)}}))
             print("LITE_APPLICATION_OK")
             """
