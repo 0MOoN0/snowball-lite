@@ -79,6 +79,12 @@ class SchedulerJobListRouter(Resource):
             jobs_df["supported_policies"] = jobs_df["job_id"].apply(
                 lambda job_id: policy_view_map.get(job_id, {}).get("supportedPolicies")
             )
+            jobs_df["policy_switchable"] = jobs_df["job_id"].apply(
+                lambda job_id: policy_view_map.get(job_id, {}).get("switchable")
+            )
+            jobs_df["policy_reason"] = jobs_df["job_id"].apply(
+                lambda job_id: policy_view_map.get(job_id, {}).get("reason")
+            )
             jobs_df["execution_state"] = jobs_df.get("state_execution_state")
             jobs_df["scheduler_run_time"] = jobs_df.get("state_scheduler_run_time")
             if "log_execution_state" in jobs_df:
@@ -139,6 +145,8 @@ class SchedulerJobListRouter(Resource):
                 'effective_policy': 'effectivePolicy',
                 'policy_source': 'policySource',
                 'supported_policies': 'supportedPolicies',
+                'policy_switchable': 'policySwitchable',
+                'policy_reason': 'policyReason',
             }, inplace=True)
         data = jobs_df.to_dict(orient='records')
         return R.ok(data=data)

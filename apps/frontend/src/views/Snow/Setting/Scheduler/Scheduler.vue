@@ -6,6 +6,13 @@
       :schema="schedulerInfoSchema"
       class="mb-5"
     />
+    <el-alert
+      title="策略说明：full 会保留完整执行记录；signal_only 只在成功执行真正处理到业务信号时保留成功记录；error_only 只保留错误和错过执行。点击“设置策略/查看策略”可查看当前任务为什么能改或为什么只读。"
+      type="info"
+      :closable="false"
+      show-icon
+      class="mb-4"
+    />
     <el-table
       :data="jobList"
       stripe

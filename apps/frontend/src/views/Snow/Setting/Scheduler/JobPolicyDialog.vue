@@ -2,9 +2,25 @@
   <Dialog v-model="dialogShow" :title="dialogTitle" @close="closeDialog" center width="520px">
     <div class="policy-dialog">
       <el-alert
+        title="策略决定任务在成功执行后要不要保留运行记录；错误和错过执行仍会保留。"
+        type="info"
+        :closable="false"
+        show-icon
+        class="mb-4"
+      />
+      <el-alert
         v-if="isReadonly"
         title="当前任务不支持切换策略，只能查看默认值和当前生效值。"
         type="info"
+        :closable="false"
+        show-icon
+        class="mb-4"
+      />
+      <el-alert
+        v-if="props.jobInfo?.policyReason"
+        :title="isReadonly ? '当前任务为什么只读' : '当前任务策略说明'"
+        type="warning"
+        :description="props.jobInfo.policyReason"
         :closable="false"
         show-icon
         class="mb-4"
@@ -24,6 +40,35 @@
         </el-descriptions-item>
         <el-descriptions-item label="可选策略">
           {{ supportedPolicyText }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <el-descriptions :column="1" border class="mt-4">
+        <el-descriptions-item label="策略说明">
+          <div class="policy-help-list">
+            <div
+              v-for="policy in explainedPolicies"
+              :key="policy.code"
+              class="policy-help-item"
+            >
+              <el-tag size="small" :type="policy.code === activePolicy ? 'success' : 'info'">
+                {{ policyLabel(policy.code) }}
+              </el-tag>
+              <span class="policy-help-text">{{ policy.description }}</span>
+            </div>
+          </div>
+        </el-descriptions-item>
+        <el-descriptions-item label="来源说明">
+          <div class="policy-help-list">
+            <div class="policy-help-item">
+              <el-tag size="small" type="info">默认值</el-tag>
+              <span class="policy-help-text">当前任务没有单独覆盖，直接使用代码里登记的默认策略。</span>
+            </div>
+            <div class="policy-help-item">
+              <el-tag size="small" type="warning">覆盖值</el-tag>
+              <span class="policy-help-text">这个任务被单独改过策略，当前生效值来自后端持久化覆盖配置。</span>
+            </div>
+          </div>
         </el-descriptions-item>
       </el-descriptions>
 
@@ -91,7 +136,33 @@ const saving = ref(false)
 
 const policyOptions = computed(() => props.jobInfo?.supportedPolicies || [])
 
-const isReadonly = computed(() => policyOptions.value.length <= 1)
+const isReadonly = computed(() => props.jobInfo?.policySwitchable === false || policyOptions.value.length <= 1)
+
+const POLICY_DESCRIPTIONS: Record<string, string> = {
+  full: '保留完整执行轨迹。成功、失败、错过执行都会按当前规则写入运行记录。',
+  signal_only: '只在本次成功执行确实处理了业务信号时保留成功记录；空轮询或无结果成功不会额外写入。',
+  error_only: '只保留错误和错过执行，成功执行不写成功记录，适合只关心异常的维护型任务。'
+}
+
+const explainedPolicies = computed(() => {
+  const seen = new Set<string>()
+  return policyOptions.value
+    .filter((policy) => {
+      if (seen.has(policy)) {
+        return false
+      }
+      seen.add(policy)
+      return true
+    })
+    .map((policy) => ({
+      code: policy,
+      description: POLICY_DESCRIPTIONS[policy] || '当前页面还没有这类策略的专门说明，请以后端返回值为准。'
+    }))
+})
+
+const activePolicy = computed(
+  () => formModel.policy || props.jobInfo?.effectivePolicy || props.jobInfo?.defaultPolicy || ''
+)
 
 const supportedPolicyText = computed(() => {
   if (!policyOptions.value.length) {

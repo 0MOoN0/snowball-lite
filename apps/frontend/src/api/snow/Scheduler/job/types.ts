@@ -12,7 +12,9 @@ export interface JobInfo {
   misfireGraceTime: number
   name: string
   nextRunTime: string | null
+  policyReason: string
   policySource: string
+  policySwitchable: boolean
   schedulerRunTime: string | null
   startDate: string
   supportedPolicies: string[]
