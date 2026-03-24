@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: scripts/deploy-lite-docker.sh [--project-name NAME] [--yes] [--skip-build] [--skip-data-sync] [--skip-healthcheck]
+Usage: scripts/deploy-lite-docker.sh [--project-name NAME] [--yes] [--skip-build] [--skip-data-sync] [--skip-healthcheck] [--frontend-image IMAGE]
 
 Interactive deploy helper for the lite docker-compose stack.
 
@@ -13,6 +13,7 @@ Options:
   --skip-build         Skip image rebuild and run plain `docker compose up -d`.
   --skip-data-sync     Do not sync apps/backend/web/data/lite_runtime into the named volume.
   --skip-healthcheck   Do not run HTTP health checks after startup.
+  --frontend-image IMG Pull and deploy frontend from a remote image instead of local build.
   -h, --help           Show this help.
 EOF
 }
@@ -66,7 +67,20 @@ default_project_name() {
 }
 
 compose() {
-  docker compose --project-name "$project_name" --file "$compose_file" "$@"
+  docker compose --project-name "$project_name" "${compose_file_args[@]}" "$@"
+}
+
+docker_login_if_needed() {
+  if [[ -z "${tcr_registry:-}" && -z "${tcr_username:-}" && -z "${tcr_password:-}" ]]; then
+    return 0
+  fi
+
+  if [[ -z "${tcr_registry:-}" || -z "${tcr_username:-}" || -z "${tcr_password:-}" ]]; then
+    echo "TCR_REGISTRY, TCR_USERNAME and TCR_PASSWORD must be set together when using remote frontend image mode." >&2
+    exit 1
+  fi
+
+  printf '%s\n' "$tcr_password" | docker login "$tcr_registry" --username "$tcr_username" --password-stdin
 }
 
 volume_has_files() {
@@ -166,6 +180,10 @@ skip_build="false"
 skip_data_sync="false"
 skip_healthcheck="false"
 project_name=""
+frontend_image="${FRONTEND_IMAGE:-}"
+tcr_registry="${TCR_REGISTRY:-}"
+tcr_username="${TCR_USERNAME:-}"
+tcr_password="${TCR_PASSWORD:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -194,6 +212,15 @@ while [[ $# -gt 0 ]]; do
       skip_healthcheck="true"
       shift
       ;;
+    --frontend-image)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --frontend-image" >&2
+        usage >&2
+        exit 1
+      fi
+      frontend_image="$2"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -211,16 +238,29 @@ require_cmd docker
 
 repo_root="$(git rev-parse --show-toplevel)"
 compose_file="$repo_root/docker-compose.yml"
+server_compose_file="$repo_root/docker-compose.server.yml"
 runtime_dir="$repo_root/apps/backend/web/data/lite_runtime"
 logs_dir="$repo_root/apps/backend/weblogs"
 backend_health_url="${BACKEND_HEALTH_URL:-http://127.0.0.1:5001/docs}"
 frontend_health_url="${FRONTEND_HEALTH_URL:-http://127.0.0.1:8080}"
 frontend_proxy_health_url="${FRONTEND_PROXY_HEALTH_URL:-http://127.0.0.1:8080/dev/docs}"
 health_timeout="${HEALTHCHECK_TIMEOUT_SECONDS:-120}"
+compose_file_args=(--file "$compose_file")
+deploy_mode="local-build"
 
 if [[ ! -f "$compose_file" ]]; then
   echo "Missing compose file: $compose_file" >&2
   exit 1
+fi
+
+if [[ -n "$frontend_image" ]]; then
+  if [[ ! -f "$server_compose_file" ]]; then
+    echo "Missing server compose file: $server_compose_file" >&2
+    exit 1
+  fi
+  export FRONTEND_IMAGE="$frontend_image"
+  compose_file_args+=(--file "$server_compose_file")
+  deploy_mode="remote-frontend-image"
 fi
 
 if [[ -z "$project_name" ]]; then
@@ -234,7 +274,8 @@ mkdir -p "$logs_dir"
 
 echo "==> lite docker deploy helper"
 echo "repo root: $repo_root"
-echo "compose file: $compose_file"
+echo "compose files: ${compose_file_args[*]}"
+echo "deploy mode: $deploy_mode"
 echo "project name: $project_name"
 echo "runtime dir: $runtime_dir"
 echo "runtime volume: $runtime_volume"
@@ -242,6 +283,9 @@ echo "logs volume: $logs_volume"
 echo "backend health url: $backend_health_url"
 echo "frontend health url: $frontend_health_url"
 echo "frontend proxy health url: $frontend_proxy_health_url"
+if [[ -n "$frontend_image" ]]; then
+  echo "frontend image: $frontend_image"
+fi
 echo
 echo "Note: current compose uses named volumes."
 echo "Files under apps/backend/web/data/lite_runtime do NOT auto-map into the container."
@@ -292,7 +336,11 @@ if [[ "$sync_data" == "true" ]]; then
   fi
 fi
 
-if [[ "$skip_build" == "true" ]]; then
+if [[ -n "$frontend_image" ]]; then
+  docker_login_if_needed
+  compose pull frontend
+  compose up -d frontend
+elif [[ "$skip_build" == "true" ]]; then
   compose up -d
 else
   compose up -d --build

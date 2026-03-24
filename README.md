@@ -204,6 +204,18 @@ scripts/deploy-lite-docker.sh
 
 这个脚本会明确提示一件事：当前 compose 用的是命名卷，`apps/backend/web/data/lite_runtime/` 下的数据库文件不会自动映射进容器；如果你希望容器直接用项目目录里的那套 lite 数据，脚本会先把它同步到命名卷，再启动服务。启动完成后，脚本还会检查后端 docs、前端首页和前端到后端的代理链路是否可用。
 
+如果前端镜像已经由 GitHub Actions 推到 TCR，服务器可以切到“拉取镜像发布”模式：
+
+```bash
+FRONTEND_IMAGE=example.tencentcloudcr.com/snowball/frontend:main \
+TCR_REGISTRY=example.tencentcloudcr.com \
+TCR_USERNAME=tcr\$ci \
+TCR_PASSWORD=****** \
+scripts/deploy-lite-docker.sh
+```
+
+这个模式会额外加载根目录的 `docker-compose.server.yml`，先 `pull frontend`，再 `up -d frontend`，不会在服务器本地重新构建前端源码。要回滚时，把 `FRONTEND_IMAGE` 改成某个历史 `sha-*` tag 再执行一次即可。
+
 启动后默认端口：
 
 - 前端页面：`http://127.0.0.1:8080`
@@ -338,6 +350,13 @@ pytest apps/backend/web/webtest -m mysql_integration -q
 - 自动发布：已配置 GitHub Actions：
   - `Release`（`push` 到 `main` 触发）：生成/更新发布 PR、合并后自动打标签并创建 Release
   - `Auto Merge Release PR`：当 PR 作者为 `github-actions[bot]` 且带有 `autorelease: pending` 标签时自动合并
+  - `Frontend Image`（`push` 到 `main` 或手动触发）：按 lite 口径构建前端镜像并推送到 TCR
+
+前端镜像 workflow 依赖这些仓库 secrets：
+- `TCR_REGISTRY`：TCR 实例域名，不带 `https://`
+- `TCR_USERNAME`：TCR 自动化账号用户名
+- `TCR_PASSWORD`：TCR 自动化账号密码
+- `TCR_FRONTEND_IMAGE`：前端镜像名，格式如 `namespace/repository`
 
 
 查看最新标签：

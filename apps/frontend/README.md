@@ -146,6 +146,15 @@ server: {
 docker compose up -d --build
 ```
 
+如果前端镜像已经由 GitHub Actions 推到 TCR，服务器发布可以改成：
+
+```bash
+FRONTEND_IMAGE=example.tencentcloudcr.com/snowball/frontend:main \
+scripts/deploy-lite-docker.sh
+```
+
+这个入口会优先拉取远端前端镜像，不在服务器本地重新执行前端 `vite build`。
+
 默认对外端口：
 
 - 前端：`8080`

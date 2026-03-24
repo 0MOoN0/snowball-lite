@@ -1,0 +1,105 @@
+name: Frontend Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/frontend-image.yml
+      - .dockerignore
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - apps/frontend/**
+      - docker/frontend/**
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    name: Build and Push Frontend Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TCR_REGISTRY: ${{ secrets.TCR_REGISTRY }}
+      TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
+      TCR_PASSWORD: ${{ secrets.TCR_PASSWORD }}
+      TCR_FRONTEND_IMAGE: ${{ secrets.TCR_FRONTEND_IMAGE }}
+    steps:
+      - name: Check required secrets
+        shell: bash
+        run: |
+          missing=0
+
+          for name in TCR_REGISTRY TCR_USERNAME TCR_PASSWORD TCR_FRONTEND_IMAGE; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required secret: ${name}"
+              missing=1
+            fi
+          done
+
+          if [[ "${missing}" -ne 0 ]]; then
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ env.TCR_USERNAME }}
+          password: ${{ env.TCR_PASSWORD }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.TCR_REGISTRY }}/${{ env.TCR_FRONTEND_IMAGE }}
+          flavor: |
+            latest=false
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=main,enable={{is_default_branch}}
+
+      - name: Build and push frontend image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/frontend/Dockerfile
+          platforms: linux/amd64
+          provenance: false
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            PNPM_VERSION=10.28.2
+            VITE_BUILD_MODE=lite
+            VITE_SOURCEMAP=false
+            NODE_OPTIONS=--max-old-space-size=1536
+
+      - name: Write build summary
+        shell: bash
+        env:
+          IMAGE: ${{ env.TCR_REGISTRY }}/${{ env.TCR_FRONTEND_IMAGE }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo "## Frontend image"
+            echo
+            echo "- Image: \`${IMAGE}\`"
+            echo "- Digest: \`${DIGEST}\`"
+            echo "- Tags:"
+            while IFS= read -r tag; do
+              [[ -n "${tag}" ]] && echo "  - \`${tag}\`"
+            done <<< "${TAGS}"
+          } >> "${GITHUB_STEP_SUMMARY}"
