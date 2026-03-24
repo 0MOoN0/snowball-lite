@@ -204,6 +204,12 @@ scripts/deploy-lite-docker.sh
 
 这个脚本会明确提示一件事：当前 compose 用的是命名卷，`apps/backend/web/data/lite_runtime/` 下的数据库文件不会自动映射进容器；如果你希望容器直接用项目目录里的那套 lite 数据，脚本会先把它同步到命名卷，再启动服务。启动完成后，脚本还会检查后端 docs、前端首页和前端到后端的代理链路是否可用。
 
+脚本启动后会先进入一个部署菜单，你可以分别选择：
+
+- 部署范围：全量、仅前端、仅后端
+- 后端策略：本地构建、复用本地镜像
+- 前端策略：本地构建、复用本地镜像、拉取远端镜像
+
 如果前端镜像已经由 GitHub Actions 推到 TCR，服务器可以切到“拉取镜像发布”模式：
 
 ```bash
@@ -214,7 +220,17 @@ TCR_PASSWORD=****** \
 scripts/deploy-lite-docker.sh
 ```
 
-这个模式会额外加载根目录的 `docker-compose.server.yml`，先 `pull frontend`，再 `up -d frontend`，不会在服务器本地重新构建前端源码。要回滚时，把 `FRONTEND_IMAGE` 改成某个历史 `sha-*` tag 再执行一次即可。
+这个模式会额外加载根目录的 `docker-compose.server.yml`，可以在菜单里选“仅前端远端镜像”，也可以通过命令行直接指定组合。比如“后端本地构建 + 前端远端镜像”：
+
+```bash
+FRONTEND_IMAGE=example.tencentcloudcr.com/snowball/frontend:main \
+TCR_REGISTRY=example.tencentcloudcr.com \
+TCR_USERNAME=tcr\$ci \
+TCR_PASSWORD=****** \
+scripts/deploy-lite-docker.sh --services all --backend-mode build --frontend-mode remote-image --yes
+```
+
+要回滚时，把 `FRONTEND_IMAGE` 改成某个历史 `sha-*` tag 再执行一次即可。
 
 启动后默认端口：
 

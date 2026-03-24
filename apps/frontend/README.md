@@ -153,6 +153,14 @@ FRONTEND_IMAGE=example.tencentcloudcr.com/snowball/frontend:main \
 scripts/deploy-lite-docker.sh
 ```
 
+脚本现在会先弹出部署菜单，可以选“仅前端”或“全量”，也可以把前端切成远端镜像、后端保留本地构建。
+如果你想走非交互模式，显式指定会更稳：
+
+```bash
+FRONTEND_IMAGE=example.tencentcloudcr.com/snowball/frontend:main \
+scripts/deploy-lite-docker.sh --services frontend --frontend-mode remote-image --yes
+```
+
 这个入口会优先拉取远端前端镜像，不在服务器本地重新执行前端 `vite build`。
 
 默认对外端口：
